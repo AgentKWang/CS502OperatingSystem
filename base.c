@@ -127,12 +127,12 @@ void    svc( SYSTEM_CALL_DATA *SystemCallData ) {
 	switch (call_type) {
         // Get time service call
         case SYSNUM_GET_TIME_OF_DAY:   // This value is found in syscalls.h
-            ZCALL( MEM_READ( Z502ClockStatus, &Time ) );
-            *(INT32 *)Z502_ARG1.PTR = Time;
+            CALL( MEM_READ( Z502ClockStatus, &Time ) );
+            *(INT32 *)SystemCallData->Argument[0] = Time;
             break;
         // terminate system call
         case SYSNUM_TERMINATE_PROCESS:
-            Z502_HALT();
+        	Z502Halt();
             break;
         default:  
             printf( "ERROR!  call_type not recognized!\n" ); 
