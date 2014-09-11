@@ -134,6 +134,10 @@ void    svc( SYSTEM_CALL_DATA *SystemCallData ) {
         case SYSNUM_TERMINATE_PROCESS:
         	Z502Halt();
             break;
+        case SYSNUM_SLEEP:
+        	MEM_WRITE(Z502TimerStart,&SystemCallData->Argument[0]);
+        	Z502Idle();
+        	break;
         default:  
             printf( "ERROR!  call_type not recognized!\n" ); 
             printf( "Call_type is - %i\n", call_type);
@@ -176,6 +180,6 @@ void    osInit( int argc, char *argv[]  ) {
 
     /*  This should be done by a "os_make_process" routine, so that
         test0 runs on a process recognized by the operating system.    */
-    Z502MakeContext( &next_context, (void *)test0, USER_MODE );
+    Z502MakeContext( &next_context, (void *)test1a, USER_MODE );
     Z502SwitchContext( SWITCH_CONTEXT_KILL_MODE, &next_context );
 }                                               // End of osInit
