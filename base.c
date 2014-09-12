@@ -26,6 +26,7 @@
 #include             "syscalls.h"
 #include             "protos.h"
 #include             "string.h"
+#include 			 "p_manage.h"
 
 
 // These loacations are global and define information about the page table
@@ -154,7 +155,7 @@ void    svc( SYSTEM_CALL_DATA *SystemCallData ) {
 ************************************************************************/
 
 void    osInit( int argc, char *argv[]  ) {
-    void                *next_context;
+    PCB                *pcb;
     INT32               i;
 
     /* Demonstrates how calling arguments are passed thru to here       */
@@ -174,12 +175,12 @@ void    osInit( int argc, char *argv[]  ) {
     /*  Determine if the switch was set, and if so go to demo routine.  */
 
     if (( argc > 1 ) && ( strcmp( argv[1], "sample" ) == 0 ) ) {
-        Z502MakeContext( &next_context, (void *)sample_code, KERNEL_MODE );
-        Z502SwitchContext( SWITCH_CONTEXT_KILL_MODE, &next_context );
+        //Z502MakeContext( &next_context, (void *)sample_code, KERNEL_MODE );
+        //Z502SwitchContext( SWITCH_CONTEXT_KILL_MODE, &next_context );
     }                   /* This routine should never return!!           */
 
     /*  This should be done by a "os_make_process" routine, so that
         test0 runs on a process recognized by the operating system.    */
-    Z502MakeContext( &next_context, (void *)test1a, USER_MODE );
-    Z502SwitchContext( SWITCH_CONTEXT_KILL_MODE, &next_context );
+    pcb = create_process( (void *)test1a, USER_MODE );
+    run_process( SWITCH_CONTEXT_KILL_MODE, pcb );
 }                                               // End of osInit
