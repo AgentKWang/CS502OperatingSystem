@@ -60,7 +60,7 @@ void    interrupt_handler( void ) {
     MEM_WRITE(Z502InterruptDevice, &device_id );
     // Now read the status of this device
     MEM_READ(Z502InterruptStatus, &status );
-
+    //printf("Aha! Here is the Interrupt_handler!!");
     /** REMOVE THE NEXT SIX LINES **/
     how_many_interrupt_entries++;                         /** TEMP **/
     if ( remove_this_in_your_code && ( how_many_interrupt_entries < 20 ) )
@@ -134,9 +134,9 @@ void    svc( SYSTEM_CALL_DATA *SystemCallData ) {
         case SYSNUM_TERMINATE_PROCESS:
         	Z502Halt();
             break;
-        case SYSNUM_SLEEP:
-        	MEM_WRITE(Z502TimerStart,&SystemCallData->Argument[0]);
-        	Z502Idle();
+        case SYSNUM_SLEEP: //If SLEEP is called
+        	CALL(MEM_WRITE(Z502TimerStart,&SystemCallData->Argument[0])); //Start the Timer
+        	Z502Idle(); //Put Z502 to idle
         	break;
         default:  
             printf( "ERROR!  call_type not recognized!\n" ); 
