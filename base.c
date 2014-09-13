@@ -173,14 +173,26 @@ void    osInit( int argc, char *argv[]  ) {
     TO_VECTOR[TO_VECTOR_TRAP_HANDLER_ADDR]  = (void *)svc;
 
     /*  Determine if the switch was set, and if so go to demo routine.  */
-
-    if (( argc > 1 ) && ( strcmp( argv[1], "sample" ) == 0 ) ) {
-        //Z502MakeContext( &next_context, (void *)sample_code, KERNEL_MODE );
-        //Z502SwitchContext( SWITCH_CONTEXT_KILL_MODE, &next_context );
-    }                   /* This routine should never return!!           */
-
-    /*  This should be done by a "os_make_process" routine, so that
-        test0 runs on a process recognized by the operating system.    */
-    pcb = create_process( (void *)test1a, USER_MODE );
-    run_process( SWITCH_CONTEXT_KILL_MODE, pcb );
+    if ( argc > 1) {
+    	if(strcmp(argv[1],"sample") == 0){
+    		printf("sample code is chosen, now run sample \n");
+    		pcb = create_process((void *)sample_code, KERNEL_MODE );
+    	    run_process ( SWITCH_CONTEXT_KILL_MODE, pcb);
+    	}
+    	else if(strcmp(argv[1],"test0") == 0 || strcmp(argv[1],"0") == 0){
+    		printf("test0 is chosen, now run test0 \n");
+    		pcb = create_process((void *)test0, USER_MODE );
+    		run_process ( SWITCH_CONTEXT_KILL_MODE, pcb);
+    	}
+    	else if(strcmp(argv[1],"test1a") == 0 || strcmp(argv[1],"1a") == 0){
+    		printf("test1a is chosen, now run test1a \n");
+    		pcb = create_process((void *)test1a, USER_MODE );
+    		run_process ( SWITCH_CONTEXT_KILL_MODE, pcb);
+    	}
+    }
+    else{
+    	printf("No switch set, run test0 now \n");
+    	pcb = create_process( (void *)test0, USER_MODE );
+    	run_process( SWITCH_CONTEXT_KILL_MODE, pcb );
+    }
 }                                               // End of osInit
