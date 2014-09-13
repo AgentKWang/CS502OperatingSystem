@@ -27,4 +27,6 @@ typedef struct{
 
 PCB* create_process(void* code_to_run, BOOL mode);
 void run_process(BOOL mode, PCB *pcb);
+void add_ready_queue(PCB *pcb);
+PCB* get_current_pcb();
 
