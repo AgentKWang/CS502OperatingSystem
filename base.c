@@ -69,7 +69,7 @@ void    interrupt_handler( void ) {
         printf( "Interrupt_handler: Found device ID %d with status %d\n",
                         device_id, status );
     }
-
+    clock_interrupt_handler(); //need add switch here
     // Clear out this device - we're done with it
     MEM_WRITE(Z502InterruptClear, &Index );
 }                                       /* End of interrupt_handler */
@@ -136,8 +136,7 @@ void    svc( SYSTEM_CALL_DATA *SystemCallData ) {
         	Z502Halt();
             break;
         case SYSNUM_SLEEP: //If SLEEP is called
-        	CALL(MEM_WRITE(Z502TimerStart,&SystemCallData->Argument[0])); //Start the Timer
-        	Z502Idle(); //Put Z502 to idle
+        	svc_sleep(SystemCallData);
         	break;
         default:  
             printf( "ERROR!  call_type not recognized!\n" ); 
@@ -145,7 +144,23 @@ void    svc( SYSTEM_CALL_DATA *SystemCallData ) {
     }                                           
 }                                               // End of svc
 
+void svc_sleep(SYSTEM_CALL_DATA *SystemCallData){
+	INT32 sleeptime, time, waketime;
+	PCB *current;
+	sleeptime = (INT32)SystemCallData->Argument[0];
+	CALL( MEM_READ( Z502ClockStatus, &time));
+	waketime = time + sleeptime;
+	current = get_current_pcb();
+	CALL(add_time_queue(current, waketime));
+	CALL(MEM_WRITE(Z502TimerStart, &sleeptime));
+	Z502Idle();
+}
 
+void clock_interrupt_handler(){
+	PCB* pcb;
+	pcb = get_wake_up_pcb();
+	run_process(SWITCH_CONTEXT_SAVE_MODE, pcb);
+}
 
 /************************************************************************
     osInit
@@ -192,7 +207,7 @@ void    osInit( int argc, char *argv[]  ) {
     }
     else{
     	printf("No switch set, run test0 now \n");
-    	pcb = create_process( (void *)test0, USER_MODE );
+    	pcb = create_process( (void *)test1a, USER_MODE );
     	run_process( SWITCH_CONTEXT_KILL_MODE, pcb );
     }
 }                                               // End of osInit
