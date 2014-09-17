@@ -21,6 +21,12 @@ typedef struct{
 }PCB;
 
 typedef struct{
+	INT32 wakeuptime;
+	PCB* pcb;
+	struct timequeue_node* next;
+}timequeue_node;
+
+typedef struct{
 	PCB* pcb;
 	struct readyqueue_item* next;
 }readyqueue_item;
