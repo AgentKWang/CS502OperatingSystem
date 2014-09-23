@@ -11,17 +11,16 @@ readyqueue_item readyqueue_header = {0,-1};
 PCB *current_pcb;
 INT32 process_counter=0; //count how many process have been created
 
-PCB* create_process(void* code_to_run, BOOL mode) {
+PCB* create_process(void* code_to_run, BOOL mode, INT32 priority, char* name) {
 // initiate the pcb	
 	PCB *pcb = (PCB*) malloc( sizeof(PCB));
 	pcb->pid = process_counter;
 	process_counter++;
-	pcb->priority=0;
+	pcb->priority=priority;
+	pcb->name = name;
 	void *context;
 	Z502MakeContext(&context, code_to_run, mode);
 	pcb->context=context;
-//The PCB is created, now add it to the readyQueue
-	add_ready_queue(pcb);
 	return pcb;
 }
 
@@ -72,3 +71,18 @@ PCB* get_current_pcb(){
 	return current_pcb;
 }
 
+void dispatcher(BOOL mode){
+	PCB *pcb;
+	readyqueue_item *q_pointer = readyqueue_header.next;
+	if(q_pointer == -1){
+		printf("*****************\nThere's no process to run!\n*****************\n");
+		return;
+	}
+	else{
+		pcb=q_pointer->pcb;
+		printf("find process %s to run \n",pcb->name);
+		readyqueue_header.next = q_pointer->next;
+		free(q_pointer);
+		run_process(mode, pcb);
+	}
+}

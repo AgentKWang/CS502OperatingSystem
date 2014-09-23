@@ -49,6 +49,29 @@ char                 *call_names[] = { "mem_read ", "mem_write",
         When the Z502 gets a hardware interrupt, it transfers control to
         this routine in the OS.
 ************************************************************************/
+
+
+void svc_sleep(SYSTEM_CALL_DATA *SystemCallData){
+	INT32 sleeptime, time, waketime;
+	PCB *current;
+	sleeptime = (INT32)SystemCallData->Argument[0];
+	CALL( MEM_READ( Z502ClockStatus, &time));
+	waketime = time + sleeptime;
+	current = get_current_pcb();
+	CALL(add_time_queue(current, waketime));
+	CALL(MEM_WRITE(Z502TimerStart, &sleeptime));
+	Z502Idle();
+}
+
+void clock_interrupt_handler(){
+	PCB* pcb;
+	pcb = get_wake_up_pcb();
+	add_ready_queue(pcb);
+	dispatcher(SWITCH_CONTEXT_SAVE_MODE);
+}
+
+
+
 void    interrupt_handler( void ) {
     INT32              device_id;
     INT32              status;
@@ -145,23 +168,6 @@ void    svc( SYSTEM_CALL_DATA *SystemCallData ) {
     }                                           
 }                                               // End of svc
 
-void svc_sleep(SYSTEM_CALL_DATA *SystemCallData){
-	INT32 sleeptime, time, waketime;
-	PCB *current;
-	sleeptime = (INT32)SystemCallData->Argument[0];
-	CALL( MEM_READ( Z502ClockStatus, &time));
-	waketime = time + sleeptime;
-	current = get_current_pcb();
-	CALL(add_time_queue(current, waketime));
-	CALL(MEM_WRITE(Z502TimerStart, &sleeptime));
-	Z502Idle();
-}
-
-void clock_interrupt_handler(){
-	PCB* pcb;
-	pcb = get_wake_up_pcb();
-	run_process(SWITCH_CONTEXT_SAVE_MODE, pcb);
-}
 
 /************************************************************************
     osInit
@@ -192,23 +198,23 @@ void    osInit( int argc, char *argv[]  ) {
     if ( argc > 1) {
     	if(strcmp(argv[1],"sample") == 0){
     		printf("sample code is chosen, now run sample \n");
-    		pcb = create_process((void *)sample_code, KERNEL_MODE );
+    		pcb = create_process((void *)sample_code, KERNEL_MODE, 0, "sample");
     	    run_process ( SWITCH_CONTEXT_KILL_MODE, pcb);
     	}
     	else if(strcmp(argv[1],"test0") == 0 || strcmp(argv[1],"0") == 0){
     		printf("test0 is chosen, now run test0 \n");
-    		pcb = create_process((void *)test0, USER_MODE );
+    		pcb = create_process((void *)test0, USER_MODE ,0, "test0");
     		run_process ( SWITCH_CONTEXT_KILL_MODE, pcb);
     	}
     	else if(strcmp(argv[1],"test1a") == 0 || strcmp(argv[1],"1a") == 0){
     		printf("test1a is chosen, now run test1a \n");
-    		pcb = create_process((void *)test1a, USER_MODE );
+    		pcb = create_process((void *)test1a, USER_MODE ,0, "test1a");
     		run_process ( SWITCH_CONTEXT_KILL_MODE, pcb);
     	}
     }
     else{
     	printf("No switch set, run test0 now \n");
-    	pcb = create_process( (void *)test1a, USER_MODE );
+    	pcb = create_process( (void *)test1a, USER_MODE ,0, "test1a");
     	run_process( SWITCH_CONTEXT_KILL_MODE, pcb );
     }
 }                                               // End of osInit
