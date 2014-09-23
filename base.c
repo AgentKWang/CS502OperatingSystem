@@ -27,6 +27,7 @@
 #include             "protos.h"
 #include             "string.h"
 #include 			 "p_manage.h"
+#include			 "timer_manage.h"
 
 
 // These loacations are global and define information about the page table

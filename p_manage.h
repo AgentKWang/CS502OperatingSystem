@@ -8,10 +8,6 @@
 #ifndef P_MANAGE_H_
 #define P_MANAGE_H_
 
-
-
-#endif /* P_MANAGE_H_ */
-
 #include "global.h"
 
 typedef struct{
@@ -20,11 +16,6 @@ typedef struct{
 	void *context;
 }PCB;
 
-typedef struct{
-	INT32 wakeuptime;
-	PCB* pcb;
-	struct timequeue_node* next;
-}timequeue_node;
 
 typedef struct{
 	PCB* pcb;
@@ -35,6 +26,6 @@ PCB* create_process(void* code_to_run, BOOL mode);
 void run_process(BOOL mode, PCB *pcb);
 void add_ready_queue(PCB *pcb);
 PCB* get_current_pcb();
-void add_time_queue(PCB* pcb, INT32 wake_up_time);
-PCB* get_wake_up_pcb();
 
+
+#endif /* P_MANAGE_H_ */
