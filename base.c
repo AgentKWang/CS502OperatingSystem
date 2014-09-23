@@ -43,34 +43,29 @@ char                 *call_names[] = { "mem_read ", "mem_write",
                             "send     ", "receive  ", "disk_read",
                             "disk_wrt ", "def_sh_ar" };
 
+/************************************************************************
+   Internal routine for system calls.
+************************************************************************/
+void svc_sleep(SYSTEM_CALL_DATA *SystemCallData);
+void svc_create_process(SYSTEM_CALL_DATA *SystemCallData);
+void svc_terminate_process(SYSTEM_CALL_DATA *SystemCallData);
+
+
+/************************************************************************
+Internal routine for interrupts.
+************************************************************************/
+void clock_interrupt_handler();
+
+
+
+
+
 
 /************************************************************************
     INTERRUPT_HANDLER
         When the Z502 gets a hardware interrupt, it transfers control to
         this routine in the OS.
 ************************************************************************/
-
-
-void svc_sleep(SYSTEM_CALL_DATA *SystemCallData){
-	INT32 sleeptime, time, waketime;
-	PCB *current;
-	sleeptime = (INT32)SystemCallData->Argument[0];
-	CALL( MEM_READ( Z502ClockStatus, &time));
-	waketime = time + sleeptime;
-	current = get_current_pcb();
-	CALL(add_time_queue(current, waketime));
-	CALL(MEM_WRITE(Z502TimerStart, &sleeptime));
-	Z502Idle();
-}
-
-void clock_interrupt_handler(){
-	PCB* pcb;
-	pcb = get_wake_up_pcb();
-	add_ready_queue(pcb);
-	dispatcher(SWITCH_CONTEXT_SAVE_MODE);
-}
-
-
 
 void    interrupt_handler( void ) {
     INT32              device_id;
@@ -162,6 +157,12 @@ void    svc( SYSTEM_CALL_DATA *SystemCallData ) {
         case SYSNUM_SLEEP: //If SLEEP is called
         	svc_sleep(SystemCallData);
         	break;
+        case SYSNUM_CREATE_PROCESS:
+        	svc_create_process(SystemCallData);
+        	break;
+        //case SYSNUM_TERMINATE_PROCESS:
+        	//svc_terminate_process(SystemCallData);
+        	//break;
         default:  
             printf( "ERROR!  call_type not recognized!\n" ); 
             printf( "Call_type is - %i\n", call_type);
@@ -213,8 +214,56 @@ void    osInit( int argc, char *argv[]  ) {
     	}
     }
     else{
-    	printf("No switch set, run test0 now \n");
-    	pcb = create_process( (void *)test1a, USER_MODE ,0, "test1a");
+    	printf("No switch set, run test1b now \n");
+    	pcb = create_process( (void *)test1b, USER_MODE ,0, "test1a");
     	run_process( SWITCH_CONTEXT_KILL_MODE, pcb );
     }
 }                                               // End of osInit
+
+/***********************************************************************
+ * System Call Service Routine
+ **********************************************************************/
+
+void svc_sleep(SYSTEM_CALL_DATA *SystemCallData){
+	INT32 sleeptime, time, waketime;
+	PCB *current;
+	sleeptime = (INT32)SystemCallData->Argument[0];
+	CALL( MEM_READ( Z502ClockStatus, &time));
+	waketime = time + sleeptime;
+	current = get_current_pcb();
+	CALL(add_time_queue(current, waketime));
+	CALL(MEM_WRITE(Z502TimerStart, &sleeptime));
+	Z502Idle();
+}  // End of svc_sleep
+
+void svc_create_process(SYSTEM_CALL_DATA *SystemCallData){
+	char *name = (char*)SystemCallData->Argument[0];
+	void *code_address = (void*)SystemCallData->Argument[1];
+	INT32 priority = (INT32)SystemCallData->Argument[2];
+	PCB *pcb = create_process(code_address, USER_MODE, priority, name);
+	*(SystemCallData->Argument[3])=(long)pcb;
+	long temp = (long)pcb;
+	if((long)pcb < 0){
+		printf("PCB=%d\n and i think it is negative\n",pcb);
+		*(SystemCallData->Argument[4])=(long)pcb;
+	}
+	else{
+		printf("PCB=%d\n and i think it is positive\n",pcb);
+		*(SystemCallData->Argument[4])=ERR_SUCCESS;
+		add_ready_queue(pcb);
+	}
+} //End of svc_create_process
+
+void svc_terminate_process(SYSTEM_CALL_DATA *SystemCallData){
+
+} //End of svc terminate_process
+
+
+void clock_interrupt_handler(){
+	PCB* pcb;
+	pcb = get_wake_up_pcb();
+	add_ready_queue(pcb);
+	dispatcher(SWITCH_CONTEXT_SAVE_MODE);
+}
+
+

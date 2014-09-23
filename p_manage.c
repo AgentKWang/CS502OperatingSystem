@@ -12,7 +12,20 @@ PCB *current_pcb;
 INT32 process_counter=0; //count how many process have been created
 
 PCB* create_process(void* code_to_run, BOOL mode, INT32 priority, char* name) {
-// initiate the pcb	
+	//check if everything is right
+	if(priority<0){
+		printf("ERRRRRRRRRR: Negative!!   %d \n",priority );
+		PCB* pcb;
+		pcb=-1;
+		return pcb;
+	}
+	readyqueue_item *q_pointer = &readyqueue_header;
+	while(q_pointer->next!=-1){
+		if(strcmp(*q_pointer->pcb->name,*name)==0){
+			return (PCB*)-2;
+		}
+	}
+	// initiate the pcb
 	PCB *pcb = (PCB*) malloc( sizeof(PCB));
 	pcb->pid = process_counter;
 	process_counter++;
