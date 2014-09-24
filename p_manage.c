@@ -12,9 +12,13 @@ PCB *current_pcb;
 INT32 process_counter=0; //count how many process have been created
 
 PCB* create_process(void* code_to_run, BOOL mode, INT32 priority, char* name) {
-	//check if everything is right
+	/*check if everything is right
+	 * return -1 for illegal priority
+	 * return -2 for same process name error
+	 * return pcb if success
+	 */
+
 	if(priority<0){
-		printf("ERRRRRRRRRR: Negative!!   %d \n",priority );
 		PCB* pcb;
 		pcb=-1;
 		return pcb;

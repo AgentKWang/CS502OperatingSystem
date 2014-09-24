@@ -244,11 +244,9 @@ void svc_create_process(SYSTEM_CALL_DATA *SystemCallData){
 	*(SystemCallData->Argument[3])=(long)pcb;
 	long temp = (long)pcb;
 	if((long)pcb < 0){
-		printf("PCB=%d\n and i think it is negative\n",pcb);
 		*(SystemCallData->Argument[4])=(long)pcb;
 	}
 	else{
-		printf("PCB=%d\n and i think it is positive\n",pcb);
 		*(SystemCallData->Argument[4])=ERR_SUCCESS;
 		add_ready_queue(pcb);
 	}
