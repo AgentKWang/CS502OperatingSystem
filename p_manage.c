@@ -25,7 +25,8 @@ PCB* create_process(void* code_to_run, BOOL mode, INT32 priority, char* name) {
 	}
 	readyqueue_item *q_pointer = &readyqueue_header;
 	while(q_pointer->next!=-1){
-		if(strcmp(*q_pointer->pcb->name,*name)==0){
+		q_pointer = q_pointer->next;
+		if(strcmp(q_pointer->pcb->name,name)==0){
 			return (PCB*)-2;
 		}
 	}
