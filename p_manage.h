@@ -15,6 +15,7 @@ typedef struct{
 	INT32 priority;
 	void *context;
 	char *name;
+	BOOL mode;
 }PCB;
 
 

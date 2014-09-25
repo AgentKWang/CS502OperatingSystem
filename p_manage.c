@@ -10,6 +10,46 @@
 readyqueue_item readyqueue_header = {0,-1};
 PCB *current_pcb;
 INT32 process_counter=0; //count how many process have been created
+INT32 pid_counter=0;
+
+void print_ready_queue(){
+	readyqueue_item *pointer = readyqueue_header.next;
+	printf("Header(0)--->");
+	while(pointer!=-1){
+		printf("%s(%d)--->",pointer->pcb->name,pointer->pcb->pid);
+		pointer=pointer->next;
+	}
+	printf("Tail(-1)\n");
+}
+
+INT32 terminate_process(INT32 pid){
+	PCB* pcb_to_destroy;
+	if(current_pcb->pid==pid){
+		pcb_to_destroy = current_pcb;
+		process_counter--;
+		free(pcb_to_destroy);
+		dispatcher(SWITCH_CONTEXT_KILL_MODE);
+	}
+	else{
+		readyqueue_item *pointer = readyqueue_header.next;
+		readyqueue_item *prev_pointer = &readyqueue_header;
+		while(pointer!=-1){
+			if(pointer->pcb->pid==pid){
+				prev_pointer->next=pointer->next;
+				process_counter--;
+				free(pointer->pcb);
+				free(pointer);
+				return ERR_SUCCESS;
+			}
+			prev_pointer = pointer;
+			pointer = pointer->next;
+		}
+		if(pointer==-1){
+			//find in timer queue
+			return -1;
+		}
+	}
+}
 
 PCB* create_process(void* code_to_run, BOOL mode, INT32 priority, char* name) {
 	/*check if everything is right
@@ -17,7 +57,9 @@ PCB* create_process(void* code_to_run, BOOL mode, INT32 priority, char* name) {
 	 * return -2 for same process name error
 	 * return pcb if success
 	 */
-
+	if(process_counter>=20){
+		return (PCB*)-3;
+	}
 	if(priority<0){
 		PCB* pcb;
 		pcb=-1;
@@ -32,10 +74,13 @@ PCB* create_process(void* code_to_run, BOOL mode, INT32 priority, char* name) {
 	}
 	// initiate the pcb
 	PCB *pcb = (PCB*) malloc( sizeof(PCB));
-	pcb->pid = process_counter;
+	pcb->pid = pid_counter;
 	process_counter++;
+	pid_counter++;
 	pcb->priority=priority;
-	pcb->name = name;
+	pcb->name = (char*)malloc(sizeof(char[16]));
+	strcpy(pcb->name,name);
+	pcb->mode=mode;
 	void *context;
 	Z502MakeContext(&context, code_to_run, mode);
 	pcb->context=context;
@@ -56,19 +101,12 @@ void add_ready_queue(PCB *pcb){
 		readyqueue_item *pointer, *prev_pointer;
 		prev_pointer = &readyqueue_header;
 		pointer = readyqueue_header.next;
-		while (pointer->next != -1 && pointer->pcb->priority < pcb->priority) {
+		while (pointer!= -1 && pointer->pcb->priority <= pcb->priority) {
 			prev_pointer = pointer;
 			pointer = pointer->next;
 		}
-		if(pointer->next==-1) {
-			item->next = (pointer->pcb->priority < pcb->priority) ? -1 : pointer ;
-			pointer->next = (pointer->pcb->priority >= pcb->priority) ?  : item ;
-			prev_pointer->next = (pointer->pcb->priority < pcb->priority) ? :item;
-		}
-		else{
-			item->next = pointer;
-			prev_pointer->next = item;
-		}
+		item->next = pointer;
+		prev_pointer->next = item;
 	} //end of situation more-than-two items queue
 }
 

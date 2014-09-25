@@ -152,7 +152,8 @@ void    svc( SYSTEM_CALL_DATA *SystemCallData ) {
             break;
         // terminate system call
         case SYSNUM_TERMINATE_PROCESS:
-        	Z502Halt();
+        	svc_terminate_process(SystemCallData);
+        	//Z502Halt();
             break;
         case SYSNUM_SLEEP: //If SLEEP is called
         	svc_sleep(SystemCallData);
@@ -160,9 +161,6 @@ void    svc( SYSTEM_CALL_DATA *SystemCallData ) {
         case SYSNUM_CREATE_PROCESS:
         	svc_create_process(SystemCallData);
         	break;
-        //case SYSNUM_TERMINATE_PROCESS:
-        	//svc_terminate_process(SystemCallData);
-        	//break;
         default:  
             printf( "ERROR!  call_type not recognized!\n" ); 
             printf( "Call_type is - %i\n", call_type);
@@ -241,19 +239,22 @@ void svc_create_process(SYSTEM_CALL_DATA *SystemCallData){
 	void *code_address = (void*)SystemCallData->Argument[1];
 	INT32 priority = (INT32)SystemCallData->Argument[2];
 	PCB *pcb = create_process(code_address, USER_MODE, priority, name);
-	*(SystemCallData->Argument[3])=(long)pcb;
-	long temp = (long)pcb;
 	if((long)pcb < 0){
 		*(SystemCallData->Argument[4])=(long)pcb;
 	}
 	else{
 		*(SystemCallData->Argument[4])=ERR_SUCCESS;
+		*(SystemCallData->Argument[3])=pcb->pid;
 		add_ready_queue(pcb);
 	}
+	print_ready_queue();
 } //End of svc_create_process
 
 void svc_terminate_process(SYSTEM_CALL_DATA *SystemCallData){
-
+	INT32 pid = (INT32)SystemCallData->Argument[0];
+	INT32 result=terminate_process(pid);
+	*(SystemCallData->Argument[1]) = result;
+	print_ready_queue();
 } //End of svc terminate_process
 
 
