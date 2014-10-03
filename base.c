@@ -49,6 +49,7 @@ char                 *call_names[] = { "mem_read ", "mem_write",
 void svc_sleep(SYSTEM_CALL_DATA *SystemCallData);
 void svc_create_process(SYSTEM_CALL_DATA *SystemCallData);
 void svc_terminate_process(SYSTEM_CALL_DATA *SystemCallData);
+void svc_get_process_id(char* process_name,long* process_id,long* err_info);
 
 
 /************************************************************************
@@ -161,6 +162,14 @@ void    svc( SYSTEM_CALL_DATA *SystemCallData ) {
         case SYSNUM_CREATE_PROCESS:
         	svc_create_process(SystemCallData);
         	break;
+        case SYSNUM_GET_PROCESS_ID:
+        {
+        	char* process_name= (char*) SystemCallData->Argument[0];
+        	long* process_id = SystemCallData->Argument[1];
+        	long* err_info = SystemCallData->Argument[2];
+        	svc_get_process_id(process_name, process_id, err_info);
+        	break;
+        }
         default:  
             printf( "ERROR!  call_type not recognized!\n" ); 
             printf( "Call_type is - %i\n", call_type);
@@ -252,10 +261,26 @@ void svc_create_process(SYSTEM_CALL_DATA *SystemCallData){
 
 void svc_terminate_process(SYSTEM_CALL_DATA *SystemCallData){
 	INT32 pid = (INT32)SystemCallData->Argument[0];
+	if(pid==-2)
+		Z502Halt();
+	if(pid==-1)
+		Z502Halt();
 	INT32 result=terminate_process(pid);
 	*(SystemCallData->Argument[1]) = result;
 	print_ready_queue();
 } //End of svc terminate_process
+
+void svc_get_process_id(char* process_name,long* process_id,long* err_info){
+	INT32 pid = get_process_id(process_name);
+	if(pid < 0) {
+		*process_id = -1;
+		*err_info = pid;
+	}
+	else{
+		*process_id = pid;
+		*err_info = ERR_SUCCESS;
+	}
+}
 
 
 void clock_interrupt_handler(){

@@ -29,6 +29,7 @@ void run_process(BOOL mode, PCB *pcb);
 void add_ready_queue(PCB *pcb);
 PCB* get_current_pcb();
 void dispatcher(BOOL mode);
+INT32 get_process_id(char* process_name);
 
 
 #endif /* P_MANAGE_H_ */

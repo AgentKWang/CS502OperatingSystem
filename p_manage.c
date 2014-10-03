@@ -3,7 +3,7 @@
 
 **/
 #include "p_manage.h"
-#include "stdlib.h"
+//#include "stdlib.h"
 
 
 
@@ -20,6 +20,18 @@ void print_ready_queue(){
 		pointer=pointer->next;
 	}
 	printf("Tail(-1)\n");
+}
+
+INT32 get_process_id(char* process_name){
+	if(process_name=="")
+		return current_pcb->pid;
+	readyqueue_item * queue_pointer = readyqueue_header.next;
+	while(queue_pointer != -1) {
+		if(strcmp(process_name, queue_pointer->pcb->name)==0)
+			return queue_pointer->pcb->pid;
+		queue_pointer= queue_pointer->next;
+	}
+	return -1;
 }
 
 INT32 terminate_process(INT32 pid){
