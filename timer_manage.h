@@ -16,7 +16,7 @@ typedef struct{
 	struct timequeue_node* next;
 }timequeue_node;
 
-void add_time_queue(PCB* pcb, INT32 wake_up_time);
+INT32 add_time_queue(PCB* pcb, INT32 wake_up_time);
 PCB* get_wake_up_pcb();
 
 

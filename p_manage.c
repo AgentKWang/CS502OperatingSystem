@@ -14,7 +14,7 @@ INT32 pid_counter=0;
 
 void print_ready_queue(){
 	readyqueue_item *pointer = readyqueue_header.next;
-	printf("Header(0)--->");
+	printf("ReadyQ:Header(0)--->");
 	while(pointer!=-1){
 		printf("%s(%d)--->",pointer->pcb->name,pointer->pcb->pid);
 		pointer=pointer->next;
@@ -122,7 +122,7 @@ void add_ready_queue(PCB *pcb){
 	} //end of situation more-than-two items queue
 }
 
-void run_process(BOOL mode, PCB *pcb){
+void run_process(PCB *pcb){
 	current_pcb=pcb; //Always remember the process that is now running
 	/*some code here to remove the pcb from ready_queue
 	 * As far as I'm concerned now, a process entered in may be
@@ -132,25 +132,27 @@ void run_process(BOOL mode, PCB *pcb){
 	 * out from timequeue already and is going to run right away,
 	 * we do not need to move it out from any queue.
 	 */
-	Z502SwitchContext(mode, &pcb->context );
+	Z502SwitchContext(SWITCH_CONTEXT_SAVE_MODE, &pcb->context );
 }
 
 PCB* get_current_pcb(){
 	return current_pcb;
 }
 
-void dispatcher(BOOL mode){
+PCB* dispatcher(){
 	PCB *pcb;
 	readyqueue_item *q_pointer = readyqueue_header.next;
 	if(q_pointer == -1){
 		printf("*****************\nThere's no process to run!\n*****************\n");
-		return;
+		print_ready_queue();
+		return -1;
 	}
 	else{
 		pcb=q_pointer->pcb;
 		printf("find process %s to run \n",pcb->name);
 		readyqueue_header.next = q_pointer->next;
 		free(q_pointer);
-		run_process(mode, pcb);
+		print_ready_queue();
+		return pcb;
 	}
 }

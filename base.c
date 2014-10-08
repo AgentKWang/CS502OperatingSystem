@@ -207,23 +207,28 @@ void    osInit( int argc, char *argv[]  ) {
     	if(strcmp(argv[1],"sample") == 0){
     		printf("sample code is chosen, now run sample \n");
     		pcb = create_process((void *)sample_code, KERNEL_MODE, 0, "sample");
-    	    run_process ( SWITCH_CONTEXT_KILL_MODE, pcb);
+    	    run_process (pcb);
     	}
     	else if(strcmp(argv[1],"test0") == 0 || strcmp(argv[1],"0") == 0){
     		printf("test0 is chosen, now run test0 \n");
     		pcb = create_process((void *)test0, USER_MODE ,0, "test0");
-    		run_process ( SWITCH_CONTEXT_KILL_MODE, pcb);
+    		run_process (pcb);
     	}
     	else if(strcmp(argv[1],"test1a") == 0 || strcmp(argv[1],"1a") == 0){
     		printf("test1a is chosen, now run test1a \n");
     		pcb = create_process((void *)test1a, USER_MODE ,0, "test1a");
-    		run_process ( SWITCH_CONTEXT_KILL_MODE, pcb);
+    		run_process (pcb);
+    	}
+    	else if(strcmp(argv[1],"test1b") == 0 || strcmp(argv[1],"1b") == 0){
+    		printf("test1a is chosen, now run test1b \n");
+    		pcb = create_process((void *)test1b, USER_MODE ,0, "test1b");
+    		run_process (pcb);
     	}
     }
     else{
-    	printf("No switch set, run test1b now \n");
-    	pcb = create_process( (void *)test1b, USER_MODE ,0, "test1a");
-    	run_process( SWITCH_CONTEXT_KILL_MODE, pcb );
+    	printf("No switch set, run test1c now \n");
+    	pcb = create_process( (void *)test1c, USER_MODE ,0, "test1c");
+    	run_process(pcb);
     }
 }                                               // End of osInit
 
@@ -235,12 +240,16 @@ void svc_sleep(SYSTEM_CALL_DATA *SystemCallData){
 	INT32 sleeptime, time, waketime;
 	PCB *current;
 	sleeptime = (INT32)SystemCallData->Argument[0];
-	CALL( MEM_READ( Z502ClockStatus, &time));
+	MEM_READ( Z502ClockStatus, &time);
 	waketime = time + sleeptime;
 	current = get_current_pcb();
-	CALL(add_time_queue(current, waketime));
-	CALL(MEM_WRITE(Z502TimerStart, &sleeptime));
-	Z502Idle();
+	INT32 next_alarm = add_time_queue(current, waketime);
+	sleeptime = next_alarm - time; //get the next alarm time
+	if(sleeptime <= 0) sleeptime = 1; //if alarm time is negative
+	current = dispatcher(); //check if any process wait in ready queue
+	if(current==-1) Z502Idle();
+	else run_process(current);
+	MEM_WRITE(Z502TimerStart, &sleeptime);
 }  // End of svc_sleep
 
 void svc_create_process(SYSTEM_CALL_DATA *SystemCallData){
@@ -287,7 +296,8 @@ void clock_interrupt_handler(){
 	PCB* pcb;
 	pcb = get_wake_up_pcb();
 	add_ready_queue(pcb);
-	dispatcher(SWITCH_CONTEXT_SAVE_MODE);
+	pcb = dispatcher();
+	run_process(pcb);
 }
 
 

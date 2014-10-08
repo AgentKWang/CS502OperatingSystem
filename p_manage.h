@@ -25,10 +25,10 @@ typedef struct{
 }readyqueue_item;
 
 PCB* create_process(void* code_to_run, BOOL mode, INT32 priority, char* name);
-void run_process(BOOL mode, PCB *pcb);
+void run_process(PCB *pcb);
 void add_ready_queue(PCB *pcb);
 PCB* get_current_pcb();
-void dispatcher(BOOL mode);
+PCB* dispatcher();
 INT32 get_process_id(char* process_name);
 
 
