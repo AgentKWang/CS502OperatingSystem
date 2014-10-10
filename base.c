@@ -90,8 +90,7 @@ void    interrupt_handler( void ) {
                         device_id, status );
     }
     clock_interrupt_handler(); //need add switch here
-    // Clear out this device - we're done with it
-    MEM_WRITE(Z502InterruptClear, &Index );
+    MEM_WRITE(Z502InterruptClear, &Index ); // Clear out this device - we're done with it
 }                                       /* End of interrupt_handler */
 /************************************************************************
     FAULT_HANDLER
@@ -243,13 +242,21 @@ void svc_sleep(SYSTEM_CALL_DATA *SystemCallData){
 	MEM_READ( Z502ClockStatus, &time);
 	waketime = time + sleeptime;
 	current = get_current_pcb();
+	SP_setup_action(SP_ACTION_MODE, "SLEEP");
+	SP_setup(SP_NEW_MODE, 0);
+	//SP_setup(SP_TERMINATED_MODE, 0 );
+	SP_setup(SP_TIME_MODE, time);
+	SP_setup(SP_TARGET_MODE, current->pid);
+	print_time_queue();
+	print_ready_queue();
+	SP_print_line();
 	INT32 next_alarm = add_time_queue(current, waketime);
 	sleeptime = next_alarm - time; //get the next alarm time
 	if(sleeptime <= 0) sleeptime = 1; //if alarm time is negative
+	MEM_WRITE(Z502TimerStart, &sleeptime);
 	current = dispatcher(); //check if any process wait in ready queue
 	if(current==-1) Z502Idle();
 	else run_process(current);
-	MEM_WRITE(Z502TimerStart, &sleeptime);
 }  // End of svc_sleep
 
 void svc_create_process(SYSTEM_CALL_DATA *SystemCallData){
@@ -265,7 +272,7 @@ void svc_create_process(SYSTEM_CALL_DATA *SystemCallData){
 		*(SystemCallData->Argument[3])=pcb->pid;
 		add_ready_queue(pcb);
 	}
-	print_ready_queue();
+	//print_ready_queue();
 } //End of svc_create_process
 
 void svc_terminate_process(SYSTEM_CALL_DATA *SystemCallData){
@@ -276,10 +283,15 @@ void svc_terminate_process(SYSTEM_CALL_DATA *SystemCallData){
 		Z502Halt();
 	INT32 result=terminate_process(pid);
 	*(SystemCallData->Argument[1]) = result;
-	print_ready_queue();
+	//print_ready_queue();
 } //End of svc terminate_process
 
 void svc_get_process_id(char* process_name,long* process_id,long* err_info){
+	if (process_name == "") {
+		*process_id = get_current_pcb()->pid;
+		*err_info = ERR_SUCCESS;
+		return;
+	}
 	INT32 pid = get_process_id(process_name);
 	if(pid < 0) {
 		*process_id = -1;
@@ -294,10 +306,28 @@ void svc_get_process_id(char* process_name,long* process_id,long* err_info){
 
 void clock_interrupt_handler(){
 	PCB* pcb;
+	INT32 next_alarm, sleeptime, current_time;
+	MEM_READ( Z502ClockStatus, &current_time);
 	pcb = get_wake_up_pcb();
 	add_ready_queue(pcb);
-	pcb = dispatcher();
-	run_process(pcb);
+	if (strcmp(pcb->name, "test1c")==0) printf("1c is going back! \n");
+	SP_setup(SP_TIME_MODE, current_time);
+	SP_setup_action(SP_ACTION_MODE, "Wakeup");
+	SP_setup(SP_NEW_MODE, 0);
+	//SP_setup(SP_TERMINATED_MODE, 0 );
+	SP_setup(SP_TARGET_MODE, pcb->pid);
+	print_ready_queue();
+	print_time_queue();
+	SP_print_line();
+	next_alarm = get_next_alarm();
+	if( next_alarm < 0 ) return;
+	else {
+		sleeptime = next_alarm - current_time;
+		if(sleeptime<-0) sleeptime = 1;
+		MEM_WRITE(Z502TimerStart, &sleeptime);
+		//pcb = dispatcher();
+		//run_process(pcb);
+	}
 }
 
 

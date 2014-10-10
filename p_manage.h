@@ -9,6 +9,7 @@
 #define P_MANAGE_H_
 
 #include "global.h"
+#include "syscalls.h"
 
 typedef struct{
 	INT32 pid;
