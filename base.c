@@ -242,6 +242,10 @@ void svc_sleep(SYSTEM_CALL_DATA *SystemCallData){
 	MEM_READ( Z502ClockStatus, &time);
 	waketime = time + sleeptime;
 	current = get_current_pcb();
+	INT32 next_alarm = add_time_queue(current, waketime);
+	//LOCK when do the state print
+	INT32 lock_result;
+	READ_MODIFY(MEMORY_INTERLOCK_BASE+2, 1, TRUE, &lock_result); //unlock the ready_queue
 	SP_setup_action(SP_ACTION_MODE, "SLEEP");
 	SP_setup(SP_NEW_MODE, 0);
 	//SP_setup(SP_TERMINATED_MODE, 0 );
@@ -250,7 +254,7 @@ void svc_sleep(SYSTEM_CALL_DATA *SystemCallData){
 	print_time_queue();
 	print_ready_queue();
 	SP_print_line();
-	INT32 next_alarm = add_time_queue(current, waketime);
+	READ_MODIFY(MEMORY_INTERLOCK_BASE+2, 0, TRUE, &lock_result); //unlock the ready_queue
 	sleeptime = next_alarm - time; //get the next alarm time
 	if(sleeptime <= 0) sleeptime = 1; //if alarm time is negative
 	MEM_WRITE(Z502TimerStart, &sleeptime);
@@ -280,15 +284,16 @@ void svc_terminate_process(SYSTEM_CALL_DATA *SystemCallData){
 	if(pid==-2)
 		Z502Halt();
 	if(pid==-1)
-		Z502Halt();
+		pid = get_current_pcb()->pid;
 	INT32 result=terminate_process(pid);
 	*(SystemCallData->Argument[1]) = result;
 	//print_ready_queue();
 } //End of svc terminate_process
 
 void svc_get_process_id(char* process_name,long* process_id,long* err_info){
-	if (process_name == "") {
-		*process_id = get_current_pcb()->pid;
+	if (strcmp(process_name,"")==0) {
+		PCB *current_pcb = get_current_pcb();
+		*process_id = current_pcb->pid;
 		*err_info = ERR_SUCCESS;
 		return;
 	}
@@ -311,6 +316,8 @@ void clock_interrupt_handler(){
 	pcb = get_wake_up_pcb();
 	add_ready_queue(pcb);
 	if (strcmp(pcb->name, "test1c")==0) printf("1c is going back! \n");
+	INT32 lock_result;
+	READ_MODIFY(MEMORY_INTERLOCK_BASE + 2, 1, TRUE, &lock_result); //Lock the printer
 	SP_setup(SP_TIME_MODE, current_time);
 	SP_setup_action(SP_ACTION_MODE, "Wakeup");
 	SP_setup(SP_NEW_MODE, 0);
@@ -319,6 +326,7 @@ void clock_interrupt_handler(){
 	print_ready_queue();
 	print_time_queue();
 	SP_print_line();
+	READ_MODIFY(MEMORY_INTERLOCK_BASE + 2 , 0, TRUE, &lock_result); //unlock the printer
 	next_alarm = get_next_alarm();
 	if( next_alarm < 0 ) return;
 	else {

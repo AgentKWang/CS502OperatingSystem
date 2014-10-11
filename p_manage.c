@@ -32,12 +32,15 @@ INT32 get_process_id(char* process_name){
 	READ_MODIFY(MEMORY_INTERLOCK_BASE, 1, TRUE, &lock_result); //lock on ready_queue
 	readyqueue_item * queue_pointer = readyqueue_header.next;
 	while(queue_pointer != -1) {
-		if(strcmp(process_name, queue_pointer->pcb->name)==0)
+		if(strcmp(process_name, queue_pointer->pcb->name)==0){
+			READ_MODIFY(MEMORY_INTERLOCK_BASE, 0, TRUE, &lock_result); //unlock the ready_queue
 			return queue_pointer->pcb->pid;
-		queue_pointer= queue_pointer->next;
+		}
+		else
+			queue_pointer= queue_pointer->next;
 	}
 	READ_MODIFY(MEMORY_INTERLOCK_BASE, 0, TRUE, &lock_result); //unlock the ready_queue
-	return -1;
+	return (INT32)queue_pointer;
 }
 
 INT32 terminate_process(INT32 pid){
