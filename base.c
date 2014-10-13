@@ -219,9 +219,19 @@ void    osInit( int argc, char *argv[]  ) {
     		run_process (pcb);
     	}
     	else if(strcmp(argv[1],"test1b") == 0 || strcmp(argv[1],"1b") == 0){
-    		printf("test1a is chosen, now run test1b \n");
+    		printf("test1b is chosen, now run test1b \n");
     		pcb = create_process((void *)test1b, USER_MODE ,0, "test1b");
     		run_process (pcb);
+    	}
+    	else if(strcmp(argv[1],"test1c") == 0 || strcmp(argv[1],"1c") == 0){
+    	    		printf("test1c is chosen, now run test1c \n");
+    	    		pcb = create_process((void *)test1c, USER_MODE ,0, "test1c");
+    	    		run_process (pcb);
+    	}
+    	else if(strcmp(argv[1],"test1d") == 0 || strcmp(argv[1],"1d") == 0){
+    	    	    		printf("test1d is chosen, now run test1d \n");
+    	    	    		pcb = create_process((void *)test1d, USER_MODE ,0, "test1d");
+    	    	    		run_process (pcb);
     	}
     }
     else{
@@ -259,8 +269,22 @@ void svc_sleep(SYSTEM_CALL_DATA *SystemCallData){
 	if(sleeptime <= 0) sleeptime = 1; //if alarm time is negative
 	MEM_WRITE(Z502TimerStart, &sleeptime);
 	current = dispatcher(); //check if any process wait in ready queue
-	if(current==-1) Z502Idle();
-	else run_process(current);
+	while(current==-1) {
+		Z502Idle();
+		current = dispatcher();
+	}
+	READ_MODIFY(MEMORY_INTERLOCK_BASE + 2, 1, TRUE, &lock_result); //Lock the printer
+	MEM_READ( Z502ClockStatus, &time); //read current time
+	SP_setup(SP_TIME_MODE, time);
+	SP_setup_action(SP_ACTION_MODE, "Dispatch");
+	SP_setup(SP_NEW_MODE, 0);
+	//SP_setup(SP_TERMINATED_MODE, 0 );
+	SP_setup(SP_TARGET_MODE, current->pid);
+	print_ready_queue();
+	print_time_queue();
+	SP_print_line();
+	READ_MODIFY(MEMORY_INTERLOCK_BASE + 2 , 0, TRUE, &lock_result); //unlock the printer
+	run_process(current);
 }  // End of svc_sleep
 
 void svc_create_process(SYSTEM_CALL_DATA *SystemCallData){
@@ -287,6 +311,20 @@ void svc_terminate_process(SYSTEM_CALL_DATA *SystemCallData){
 		pid = get_current_pcb()->pid;
 	INT32 result=terminate_process(pid);
 	*(SystemCallData->Argument[1]) = result;
+	PCB *pcb_to_run = dispatcher();
+	if(pcb_to_run!=-1) run_process(pcb_to_run);
+	else {
+		//check if there's anything in timerQ
+		timequeue_node* timeq_head = get_timer_queue_head();
+		if (timeq_head->next == -1) Z502Halt();
+		else {
+			while(pcb_to_run==-1){
+				Z502Idle();
+				pcb_to_run = dispatcher();
+			}
+			run_process(pcb_to_run);
+		}
+	}
 	//print_ready_queue();
 } //End of svc terminate_process
 
@@ -299,8 +337,11 @@ void svc_get_process_id(char* process_name,long* process_id,long* err_info){
 	}
 	INT32 pid = get_process_id(process_name);
 	if(pid < 0) {
-		*process_id = -1;
-		*err_info = pid;
+		pid = get_process_id_in_timer_queue(process_name); //check if the process is in time queue
+		if(pid < 0){
+			*process_id = -1;
+			*err_info = pid;
+		}
 	}
 	else{
 		*process_id = pid;
@@ -315,7 +356,7 @@ void clock_interrupt_handler(){
 	MEM_READ( Z502ClockStatus, &current_time);
 	pcb = get_wake_up_pcb();
 	add_ready_queue(pcb);
-	if (strcmp(pcb->name, "test1c")==0) printf("1c is going back! \n");
+	//if (strcmp(pcb->name, "test1c")==0) printf("1c is going back! \n");
 	INT32 lock_result;
 	READ_MODIFY(MEMORY_INTERLOCK_BASE + 2, 1, TRUE, &lock_result); //Lock the printer
 	SP_setup(SP_TIME_MODE, current_time);
@@ -328,7 +369,7 @@ void clock_interrupt_handler(){
 	SP_print_line();
 	READ_MODIFY(MEMORY_INTERLOCK_BASE + 2 , 0, TRUE, &lock_result); //unlock the printer
 	next_alarm = get_next_alarm();
-	if( next_alarm < 0 ) return;
+	if( next_alarm < 0 ) return; //there's no item in time queue, do nothing.
 	else {
 		sleeptime = next_alarm - current_time;
 		if(sleeptime<-0) sleeptime = 1;

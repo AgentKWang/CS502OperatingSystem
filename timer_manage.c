@@ -61,6 +61,9 @@ INT32 add_time_queue(PCB* pcb, INT32 wake_up_time){
 	return next_alarm->wakeuptime;
 }
 
+timequeue_node* get_timer_queue_head(){
+	return &timequeue_header;
+}
 PCB* get_wake_up_pcb(){
 	PCB *wake_up_pcb = -1;
 	if(timequeue_header.next != -1){
@@ -77,4 +80,19 @@ PCB* get_wake_up_pcb(){
 	return wake_up_pcb;
 }
 
+INT32 get_process_id_in_timer_queue(char *process_name){
+	INT32 lock_result;
+	READ_MODIFY(MEMORY_INTERLOCK_BASE+1, 1, TRUE, &lock_result); //lock on time_queue
+	timequeue_node * queue_pointer = timequeue_header.next;
+		while(queue_pointer != -1) {
+			if(strcmp(process_name, queue_pointer->pcb->name)==0){
+				READ_MODIFY(MEMORY_INTERLOCK_BASE+1, 0, TRUE, &lock_result); //unlock the time_queue
+				return queue_pointer->pcb->pid;
+			}
+			else
+				queue_pointer= queue_pointer->next;
+		}
+		READ_MODIFY(MEMORY_INTERLOCK_BASE+1, 0, TRUE, &lock_result); //unlock the time_queue
+		return -1;
+}
 

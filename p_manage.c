@@ -26,7 +26,7 @@ void print_ready_queue(){
 
 INT32 get_process_id(char* process_name){
 	if (strcmp(current_pcb->name, process_name)==0) return current_pcb->pid;
-	if(process_name=="")
+	if(strcmp(process_name,"")==0)
 		return current_pcb->pid;
 	INT32 lock_result;
 	READ_MODIFY(MEMORY_INTERLOCK_BASE, 1, TRUE, &lock_result); //lock on ready_queue
@@ -40,25 +40,20 @@ INT32 get_process_id(char* process_name){
 			queue_pointer= queue_pointer->next;
 	}
 	READ_MODIFY(MEMORY_INTERLOCK_BASE, 0, TRUE, &lock_result); //unlock the ready_queue
-	return (INT32)queue_pointer;
+	return -1;
 }
 
 INT32 terminate_process(INT32 pid){
-	PCB* pcb_to_destroy, *pcb_to_run;
+	PCB* pcb_to_destroy;
 	if(current_pcb->pid==pid){
 		pcb_to_destroy = current_pcb;
 		process_counter--;
 		free(pcb_to_destroy);
-		pcb_to_run = dispatcher();
-		if (pcb_to_run == -1) {
-			//nothing to run next, halt
-			Z502Halt();
-		}
-		else{
-			run_process(pcb_to_run);
-		}
+		return ERR_SUCCESS;
 	}
 	else{
+		INT32 lock_result;
+		READ_MODIFY(MEMORY_INTERLOCK_BASE, 1, TRUE, &lock_result);
 		readyqueue_item *pointer = readyqueue_header.next;
 		readyqueue_item *prev_pointer = &readyqueue_header;
 		while(pointer!=-1){
@@ -72,6 +67,7 @@ INT32 terminate_process(INT32 pid){
 			prev_pointer = pointer;
 			pointer = pointer->next;
 		}
+		READ_MODIFY(MEMORY_INTERLOCK_BASE, 0, TRUE, &lock_result);
 		if(pointer==-1){
 			//find in timer queue
 			return -1;
@@ -144,7 +140,7 @@ void add_ready_queue(PCB *pcb){
 void run_process(PCB *pcb){
 	current_pcb=pcb; //Always remember the process that is now running
 	/*some code here to remove the pcb from ready_queue
-	 * As far as I'm concerned now, a process entered in may be
+	 * As far as I'm concerned, a process entered in may be
 	 * from a readyqueue, in this case you need to move it out from the
 	 * readyqueue, or it may be called by the routine in svc where the
 	 * pcb is from a timequeque, and in this case, since the pcb is moved

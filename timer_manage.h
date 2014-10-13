@@ -20,6 +20,7 @@ typedef struct{
 INT32 add_time_queue(PCB* pcb, INT32 wake_up_time);
 PCB* get_wake_up_pcb();
 INT32 get_next_alarm();
-
+timequeue_node* get_timer_queue_head();
+INT32 get_process_id_in_timer_queue(char *process_name);
 
 #endif /* TIMER_MANAGE_H_ */
