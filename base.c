@@ -372,7 +372,7 @@ void clock_interrupt_handler(){
 	if( next_alarm < 0 ) return; //there's no item in time queue, do nothing.
 	else {
 		sleeptime = next_alarm - current_time;
-		if(sleeptime<-0) sleeptime = 1;
+		if(sleeptime<=0) sleeptime = 1;
 		MEM_WRITE(Z502TimerStart, &sleeptime);
 		//pcb = dispatcher();
 		//run_process(pcb);

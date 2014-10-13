@@ -17,6 +17,8 @@ typedef struct{
 	void *context;
 	char *name;
 	BOOL mode;
+	BOOL suspend_flag; //If Interrupt Handler see this flag,
+						//it will put the pcb in suspendQ rather than ReadyQ.
 }PCB;
 
 

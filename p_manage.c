@@ -99,6 +99,7 @@ PCB* create_process(void* code_to_run, BOOL mode, INT32 priority, char* name) {
 	// initiate the pcb
 	PCB *pcb = (PCB*) malloc( sizeof(PCB));
 	pcb->pid = pid_counter;
+	pcb->suspend_flag = 0; //by default this flag is unset.
 	process_counter++;
 	pid_counter++;
 	pcb->priority=priority;
