@@ -21,6 +21,10 @@ typedef struct{
 						//it will put the pcb in suspendQ rather than ReadyQ.
 }PCB;
 
+typedef struct{
+	PCB* pcb;
+	struct suspendqueue_node *next;
+}suspendqueue_node;
 
 typedef struct{
 	PCB* pcb;
@@ -33,6 +37,7 @@ void add_ready_queue(PCB *pcb);
 PCB* get_current_pcb();
 PCB* dispatcher();
 INT32 get_process_id(char* process_name);
-
+INT32 suspend_process(INT32 pid);
+INT32 resume_process(INT32 pid);
 
 #endif /* P_MANAGE_H_ */

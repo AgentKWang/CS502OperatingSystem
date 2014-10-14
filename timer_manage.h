@@ -22,5 +22,6 @@ PCB* get_wake_up_pcb();
 INT32 get_next_alarm();
 timequeue_node* get_timer_queue_head();
 INT32 get_process_id_in_timer_queue(char *process_name);
+PCB* get_pcb_from_timer_queue(INT32 pid);
 
 #endif /* TIMER_MANAGE_H_ */

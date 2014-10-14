@@ -50,7 +50,8 @@ void svc_sleep(SYSTEM_CALL_DATA *SystemCallData);
 void svc_create_process(SYSTEM_CALL_DATA *SystemCallData);
 void svc_terminate_process(SYSTEM_CALL_DATA *SystemCallData);
 void svc_get_process_id(char* process_name,long* process_id,long* err_info);
-
+void svc_suspend_process(INT32 pid,long* err_info);
+void svc_resume_process(INT32 pid, long* err_info);
 
 /************************************************************************
 Internal routine for interrupts.
@@ -169,6 +170,18 @@ void    svc( SYSTEM_CALL_DATA *SystemCallData ) {
         	svc_get_process_id(process_name, process_id, err_info);
         	break;
         }
+        case SYSNUM_SUSPEND_PROCESS:{
+        	INT32 pid = (INT32)SystemCallData->Argument[0];
+        	long *err_info = SystemCallData->Argument[1];
+        	svc_suspend_process(pid, err_info);
+        	break;
+        }
+        case SYSNUM_RESUME_PROCESS:{
+        	INT32 pid = (INT32)SystemCallData->Argument[0];
+        	long *err_info = SystemCallData->Argument[1];
+        	svc_resume_process(pid, err_info);
+        	break;
+        }
         default:  
             printf( "ERROR!  call_type not recognized!\n" ); 
             printf( "Call_type is - %i\n", call_type);
@@ -233,10 +246,15 @@ void    osInit( int argc, char *argv[]  ) {
     	    	    		pcb = create_process((void *)test1d, USER_MODE ,0, "test1d");
     	    	    		run_process (pcb);
     	}
+    	else if(strcmp(argv[1],"test1e") == 0 || strcmp(argv[1],"1e") == 0){
+    	    	    		printf("test1e is chosen, now run test1e \n");
+    	    	    		pcb = create_process((void *)test1e, USER_MODE ,0, "test1e");
+    	    	    		run_process (pcb);
+    	}
     }
     else{
-    	printf("No switch set, run test1c now \n");
-    	pcb = create_process( (void *)test1c, USER_MODE ,0, "test1c");
+    	printf("No switch set, run test1e now \n");
+    	pcb = create_process( (void *)test1e, USER_MODE ,0, "test1e");
     	run_process(pcb);
     }
 }                                               // End of osInit
@@ -349,13 +367,49 @@ void svc_get_process_id(char* process_name,long* process_id,long* err_info){
 	}
 }
 
+void svc_resume_process(INT32 pid, long* err_info){
+	INT32 result = resume_process(pid);
+	if(result==-1){
+		PCB* pcb=get_pcb_from_timer_queue(pid);
+		if(pcb!=-1){
+			pcb->suspend_flag = 0;
+		}
+		else *err_info=-1;
+	}
+	else *err_info=ERR_SUCCESS;
+}
+
+void svc_suspend_process(INT32 pid,long* err_info){
+	PCB *current_run = get_current_pcb();
+	if(current_run->pid!=pid){
+		PCB* pcb=get_pcb_from_ready_queue(pid);
+		if(pcb==-1){
+			pcb = get_pcb_from_timer_queue(pid);
+			if(pcb==-1){
+				*err_info = -1;
+			}
+			else{
+				pcb->suspend_flag =1;
+			}
+		}
+		else *err_info = suspend_process(pid);
+	}
+	else *err_info = -2;//if suspend current running process
+	INT32 time;
+	MEM_READ( Z502ClockStatus, &time); //read current time
+	state_print(time,"suspend",pid);
+}
 
 void clock_interrupt_handler(){
 	PCB* pcb;
 	INT32 next_alarm, sleeptime, current_time;
 	MEM_READ( Z502ClockStatus, &current_time);
 	pcb = get_wake_up_pcb();
-	add_ready_queue(pcb);
+	if(pcb->suspend_flag){
+		pcb->suspend_flag = 0; //clear the flag
+		add_suspend_queue(pcb);
+	}
+	else add_ready_queue(pcb);
 	//if (strcmp(pcb->name, "test1c")==0) printf("1c is going back! \n");
 	INT32 lock_result;
 	READ_MODIFY(MEMORY_INTERLOCK_BASE + 2, 1, TRUE, &lock_result); //Lock the printer
@@ -366,6 +420,7 @@ void clock_interrupt_handler(){
 	SP_setup(SP_TARGET_MODE, pcb->pid);
 	print_ready_queue();
 	print_time_queue();
+	print_suspend_queue();
 	SP_print_line();
 	READ_MODIFY(MEMORY_INTERLOCK_BASE + 2 , 0, TRUE, &lock_result); //unlock the printer
 	next_alarm = get_next_alarm();
@@ -379,4 +434,17 @@ void clock_interrupt_handler(){
 	}
 }
 
-
+void state_print(INT32 current_time, char* action, INT32 target_pid){
+	INT32 lock_result;
+	READ_MODIFY(MEMORY_INTERLOCK_BASE + 2, 1, TRUE, &lock_result); //Lock the printer
+	SP_setup(SP_TIME_MODE, current_time);
+	SP_setup_action(SP_ACTION_MODE, action);
+	SP_setup(SP_NEW_MODE, 0);
+	//SP_setup(SP_TERMINATED_MODE, 0 );
+	SP_setup(SP_TARGET_MODE, target_pid);
+	print_ready_queue();
+	print_time_queue();
+	print_suspend_queue();
+	SP_print_line();
+	READ_MODIFY(MEMORY_INTERLOCK_BASE + 2 , 0, TRUE, &lock_result); //unlock the printer
+}

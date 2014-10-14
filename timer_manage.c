@@ -96,3 +96,15 @@ INT32 get_process_id_in_timer_queue(char *process_name){
 		return -1;
 }
 
+PCB* get_pcb_from_timer_queue(INT32 pid){
+	timequeue_node * pointer = timequeue_header.next;
+	INT32 lock_result;
+	READ_MODIFY(MEMORY_INTERLOCK_BASE + 1, 1, TRUE, &lock_result);
+	while(pointer!=-1){
+		if(pointer->pcb->pid==pid) break;
+		pointer = pointer->next;
+	}
+	READ_MODIFY(MEMORY_INTERLOCK_BASE + 1, 0, TRUE, &lock_result);
+	if(pointer!=-1) return pointer->pcb;
+	else return -1;
+}

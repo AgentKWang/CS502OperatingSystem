@@ -175,3 +175,87 @@ PCB* dispatcher(){
 		return pcb;
 	}
 }
+
+PCB* get_pcb_from_ready_queue(INT32 pid){
+	readyqueue_item * pointer = readyqueue_header.next;
+	INT32 lock_result;
+	READ_MODIFY(MEMORY_INTERLOCK_BASE, 1, TRUE, &lock_result);
+	while(pointer!=-1){
+		if(pointer->pcb->pid==pid) break;
+		pointer = pointer->next;
+	}
+	READ_MODIFY(MEMORY_INTERLOCK_BASE, 0, TRUE, &lock_result);
+	if(pointer!=-1) return pointer->pcb;
+	else return -1;
+}
+
+suspendqueue_node suspend_queue_head = {0,-1};
+
+INT32 suspend_process(INT32 pid){
+	readyqueue_item *prev_pointer=&readyqueue_header, *pointer=readyqueue_header.next;
+	INT32 lock_result;
+	READ_MODIFY(MEMORY_INTERLOCK_BASE, 1, TRUE, &lock_result);
+	while(pointer!= -1){
+		if(pointer->pcb->pid == pid) break;
+		prev_pointer = pointer;
+		pointer = pointer->next;
+	}
+	if(pointer == -1){
+		READ_MODIFY(MEMORY_INTERLOCK_BASE, 0, TRUE, &lock_result);
+		return -1;
+	}
+	else{
+		prev_pointer->next = pointer->next; //remove from ready queue
+		READ_MODIFY(MEMORY_INTERLOCK_BASE, 0, TRUE, &lock_result);
+		add_suspend_queue(pointer->pcb);
+		free(pointer);
+		return ERR_SUCCESS;
+	}
+}
+
+void add_suspend_queue(PCB *pcb){
+	INT32 lock_result;
+	suspendqueue_node *new_node;
+	new_node= (suspendqueue_node*) malloc( sizeof( suspendqueue_node));
+	new_node->pcb =pcb;
+	new_node->next = -1;
+	READ_MODIFY(MEMORY_INTERLOCK_BASE + 3, 1, TRUE, &lock_result);
+	suspendqueue_node *sus_pointer = &suspend_queue_head;
+	while(sus_pointer->next!=-1) sus_pointer = sus_pointer->next;
+	sus_pointer->next = new_node;
+	READ_MODIFY(MEMORY_INTERLOCK_BASE + 3, 0, TRUE, &lock_result);
+}
+
+INT32 resume_process(INT32 pid){
+	INT32 lock_result;
+	suspendqueue_node *pointer = suspend_queue_head.next, *prev_pointer=&suspend_queue_head;
+	READ_MODIFY(MEMORY_INTERLOCK_BASE + 3, 1, TRUE, &lock_result);
+	while(pointer!=-1){
+		if(pointer->pcb->pid==pid) break;
+		prev_pointer = pointer;
+		pointer = pointer->next;
+	}
+	if(pointer==-1){
+		READ_MODIFY(MEMORY_INTERLOCK_BASE + 3, 0, TRUE, &lock_result);
+		return -1;
+	}
+	else{
+		prev_pointer->next=pointer->next;
+		add_ready_queue(pointer->pcb);
+		free(pointer);
+		READ_MODIFY(MEMORY_INTERLOCK_BASE + 3, 0, TRUE, &lock_result);
+		return ERR_SUCCESS;
+	}
+}
+
+void print_suspend_queue(){
+	INT32 lock_result;
+	READ_MODIFY(MEMORY_INTERLOCK_BASE + 3, 1, TRUE, &lock_result);
+	suspendqueue_node *pointer = suspend_queue_head.next;
+	SP_setup(SP_RUNNING_MODE, current_pcb->pid);
+	while(pointer!=-1){
+		SP_setup(SP_PROCESS_SUSPENDED_MODE,pointer->pcb->pid);
+		pointer=pointer->next;
+	}
+	READ_MODIFY(MEMORY_INTERLOCK_BASE + 3, 0, TRUE, &lock_result);
+}
