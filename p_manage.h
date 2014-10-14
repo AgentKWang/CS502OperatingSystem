@@ -39,5 +39,6 @@ PCB* dispatcher();
 INT32 get_process_id(char* process_name);
 INT32 suspend_process(INT32 pid);
 INT32 resume_process(INT32 pid);
+void add_suspend_queue(PCB *pcb);
 
 #endif /* P_MANAGE_H_ */

@@ -52,6 +52,7 @@ void svc_terminate_process(SYSTEM_CALL_DATA *SystemCallData);
 void svc_get_process_id(char* process_name,long* process_id,long* err_info);
 void svc_suspend_process(INT32 pid,long* err_info);
 void svc_resume_process(INT32 pid, long* err_info);
+void state_print(char* action, INT32 target_pid);
 
 /************************************************************************
 Internal routine for interrupts.
@@ -251,10 +252,20 @@ void    osInit( int argc, char *argv[]  ) {
     	    	    		pcb = create_process((void *)test1e, USER_MODE ,0, "test1e");
     	    	    		run_process (pcb);
     	}
+    	else if(strcmp(argv[1],"test1f") == 0 || strcmp(argv[1],"1f") == 0){
+    	    	    	    		printf("test1f is chosen, now run test1f \n");
+    	    	    	    		pcb = create_process((void *)test1f, USER_MODE ,0, "test1f");
+    	    	    	    		run_process (pcb);
+    	}
+    	else if(strcmp(argv[1],"test1g") == 0 || strcmp(argv[1],"1g") == 0){
+    	    	    	    		printf("test1g is chosen, now run test1g \n");
+    	    	    	    		pcb = create_process((void *)test1g, USER_MODE ,0, "test1g");
+    	    	    	    		run_process (pcb);
+    	}
     }
     else{
     	printf("No switch set, run test1e now \n");
-    	pcb = create_process( (void *)test1e, USER_MODE ,0, "test1e");
+    	pcb = create_process( (void *)test1f, USER_MODE ,0, "test1f");
     	run_process(pcb);
     }
 }                                               // End of osInit
@@ -377,11 +388,12 @@ void svc_resume_process(INT32 pid, long* err_info){
 		else *err_info=-1;
 	}
 	else *err_info=ERR_SUCCESS;
+	state_print("resume", pid);
 }
 
 void svc_suspend_process(INT32 pid,long* err_info){
 	PCB *current_run = get_current_pcb();
-	if(current_run->pid!=pid){
+	if(current_run->pid!=pid && pid!=-1){
 		PCB* pcb=get_pcb_from_ready_queue(pid);
 		if(pcb==-1){
 			pcb = get_pcb_from_timer_queue(pid);
@@ -395,9 +407,7 @@ void svc_suspend_process(INT32 pid,long* err_info){
 		else *err_info = suspend_process(pid);
 	}
 	else *err_info = -2;//if suspend current running process
-	INT32 time;
-	MEM_READ( Z502ClockStatus, &time); //read current time
-	state_print(time,"suspend",pid);
+	state_print("suspend",pid);
 }
 
 void clock_interrupt_handler(){
@@ -434,7 +444,9 @@ void clock_interrupt_handler(){
 	}
 }
 
-void state_print(INT32 current_time, char* action, INT32 target_pid){
+void state_print(char* action, INT32 target_pid){
+	INT32 current_time;
+	MEM_READ( Z502ClockStatus, &current_time); //read current time
 	INT32 lock_result;
 	READ_MODIFY(MEMORY_INTERLOCK_BASE + 2, 1, TRUE, &lock_result); //Lock the printer
 	SP_setup(SP_TIME_MODE, current_time);
