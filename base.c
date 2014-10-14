@@ -283,17 +283,7 @@ void svc_sleep(SYSTEM_CALL_DATA *SystemCallData){
 	current = get_current_pcb();
 	INT32 next_alarm = add_time_queue(current, waketime);
 	//LOCK when do the state print
-	INT32 lock_result;
-	READ_MODIFY(MEMORY_INTERLOCK_BASE+2, 1, TRUE, &lock_result); //unlock the ready_queue
-	SP_setup_action(SP_ACTION_MODE, "SLEEP");
-	SP_setup(SP_NEW_MODE, 0);
-	//SP_setup(SP_TERMINATED_MODE, 0 );
-	SP_setup(SP_TIME_MODE, time);
-	SP_setup(SP_TARGET_MODE, current->pid);
-	print_time_queue();
-	print_ready_queue();
-	SP_print_line();
-	READ_MODIFY(MEMORY_INTERLOCK_BASE+2, 0, TRUE, &lock_result); //unlock the ready_queue
+	state_print("sleep", current->pid);
 	sleeptime = next_alarm - time; //get the next alarm time
 	if(sleeptime <= 0) sleeptime = 1; //if alarm time is negative
 	MEM_WRITE(Z502TimerStart, &sleeptime);
@@ -302,17 +292,7 @@ void svc_sleep(SYSTEM_CALL_DATA *SystemCallData){
 		Z502Idle();
 		current = dispatcher();
 	}
-	READ_MODIFY(MEMORY_INTERLOCK_BASE + 2, 1, TRUE, &lock_result); //Lock the printer
-	MEM_READ( Z502ClockStatus, &time); //read current time
-	SP_setup(SP_TIME_MODE, time);
-	SP_setup_action(SP_ACTION_MODE, "Dispatch");
-	SP_setup(SP_NEW_MODE, 0);
-	//SP_setup(SP_TERMINATED_MODE, 0 );
-	SP_setup(SP_TARGET_MODE, current->pid);
-	print_ready_queue();
-	print_time_queue();
-	SP_print_line();
-	READ_MODIFY(MEMORY_INTERLOCK_BASE + 2 , 0, TRUE, &lock_result); //unlock the printer
+	state_print("dispatch", current->pid);
 	run_process(current);
 }  // End of svc_sleep
 
@@ -421,18 +401,7 @@ void clock_interrupt_handler(){
 	}
 	else add_ready_queue(pcb);
 	//if (strcmp(pcb->name, "test1c")==0) printf("1c is going back! \n");
-	INT32 lock_result;
-	READ_MODIFY(MEMORY_INTERLOCK_BASE + 2, 1, TRUE, &lock_result); //Lock the printer
-	SP_setup(SP_TIME_MODE, current_time);
-	SP_setup_action(SP_ACTION_MODE, "Wakeup");
-	SP_setup(SP_NEW_MODE, 0);
-	//SP_setup(SP_TERMINATED_MODE, 0 );
-	SP_setup(SP_TARGET_MODE, pcb->pid);
-	print_ready_queue();
-	print_time_queue();
-	print_suspend_queue();
-	SP_print_line();
-	READ_MODIFY(MEMORY_INTERLOCK_BASE + 2 , 0, TRUE, &lock_result); //unlock the printer
+	state_print("wakeup",pcb->pid);
 	next_alarm = get_next_alarm();
 	if( next_alarm < 0 ) return; //there's no item in time queue, do nothing.
 	else {
