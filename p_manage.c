@@ -248,6 +248,42 @@ INT32 resume_process(INT32 pid){
 	}
 }
 
+INT32 change_priority_in_ready_queue(INT32 pid, INT32 priority){
+	readyqueue_item *prev_pointer=&readyqueue_header, *pointer = readyqueue_header.next;
+	INT32 lock_result;
+	READ_MODIFY(MEMORY_INTERLOCK_BASE, 1, TRUE, &lock_result);
+	while(pointer!=-1){
+		if(pointer->pcb->pid==pid) break;
+		prev_pointer=pointer;
+		pointer=pointer->next;
+	}
+	if(pointer==-1){ //not find in readyq, try to find in suspend q
+		READ_MODIFY(MEMORY_INTERLOCK_BASE, 0, TRUE, &lock_result);
+		READ_MODIFY(MEMORY_INTERLOCK_BASE + 3, 1, TRUE, &lock_result);
+		suspendqueue_node *pointer = suspend_queue_head.next;
+		while(pointer!=-1){
+			if(pointer->pcb->pid==pid) break;
+			pointer = pointer->next;
+		}
+		if(pointer==-1){  //not find in both Q
+			READ_MODIFY(MEMORY_INTERLOCK_BASE + 3, 0, TRUE, &lock_result);
+			return -1;
+		}
+		else{  //find in suspend Q
+			pointer->pcb->priority=priority;
+			READ_MODIFY(MEMORY_INTERLOCK_BASE + 3, 0, TRUE, &lock_result);
+			return ERR_SUCCESS;
+		}
+	}
+	else{ //find in ReadyQ
+		prev_pointer->next = pointer->next;
+		pointer->pcb->priority = priority;
+		READ_MODIFY(MEMORY_INTERLOCK_BASE, 0, TRUE, &lock_result);
+		add_ready_queue(pointer->pcb);
+		return ERR_SUCCESS;
+	}
+}
+
 void print_suspend_queue(){
 	INT32 lock_result;
 	READ_MODIFY(MEMORY_INTERLOCK_BASE + 3, 1, TRUE, &lock_result);

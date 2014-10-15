@@ -108,3 +108,22 @@ PCB* get_pcb_from_timer_queue(INT32 pid){
 	if(pointer!=-1) return pointer->pcb;
 	else return -1;
 }
+
+
+INT32 change_priority_in_timer_queue(INT32 pid, INT32 priority){
+	INT32 lock_result;
+	READ_MODIFY(MEMORY_INTERLOCK_BASE + 1, 1, TRUE, &lock_result);
+	timequeue_node *pointer = timequeue_header.next;
+	while(pointer!=-1){
+		if(pointer->pcb->pid==pid) break;
+		pointer = pointer->next;
+	}
+	if(pointer==-1){
+		READ_MODIFY(MEMORY_INTERLOCK_BASE + 1, 0, TRUE, &lock_result);
+		return -1;
+	}
+	else{
+		pointer->pcb->priority = priority;
+		return ERR_SUCCESS;
+	}
+}
