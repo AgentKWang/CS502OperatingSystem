@@ -270,10 +270,15 @@ void    osInit( int argc, char *argv[]  ) {
     	    	    	    		pcb = create_process((void *)test1g, USER_MODE ,0, "test1g");
     	    	    	    		run_process (pcb);
     	}
+    	else if(strcmp(argv[1],"test1h") == 0 || strcmp(argv[1],"1h") == 0){
+    	    	    	    		printf("test1h is chosen, now run test1h \n");
+    	    	    	    		pcb = create_process((void *)test1h, USER_MODE ,0, "test1h");
+    	    	    	    		run_process (pcb);
+    	}
     }
     else{
-    	printf("No switch set, run test1g now \n");
-    	pcb = create_process( (void *)test1g, USER_MODE ,0, "test1g");
+    	printf("No switch set, run test1h now \n");
+    	pcb = create_process( (void *)test1h, USER_MODE ,0, "test1h");
     	run_process(pcb);
     }
 }                                               // End of osInit
@@ -290,11 +295,11 @@ void svc_sleep(SYSTEM_CALL_DATA *SystemCallData){
 	waketime = time + sleeptime;
 	current = get_current_pcb();
 	INT32 next_alarm = add_time_queue(current, waketime);
-	//LOCK when do the state print
-	state_print("sleep", current->pid);
 	sleeptime = next_alarm - time; //get the next alarm time
 	if(sleeptime <= 0) sleeptime = 1; //if alarm time is negative
 	MEM_WRITE(Z502TimerStart, &sleeptime);
+	//LOCK when do the state print
+	state_print("sleep", current->pid);
 	current = dispatcher(); //check if any process wait in ready queue
 	while(current==-1) {
 		Z502Idle();
@@ -399,6 +404,11 @@ void svc_suspend_process(INT32 pid,long* err_info){
 }
 
 void svc_change_priority(INT32 pid, INT32 priority, long *err_info){
+	if(pid==-1){
+		PCB *pcb = get_current_pcb();
+		pcb->priority = priority;
+		*err_info = ERR_SUCCESS;
+	}
 	if(priority<0 || priority > 100){
 		*err_info = -2;
 		return;
