@@ -52,6 +52,7 @@ void svc_terminate_process(SYSTEM_CALL_DATA *SystemCallData);
 void svc_get_process_id(char* process_name,long* process_id,long* err_info);
 void svc_suspend_process(INT32 pid,long* err_info);
 void svc_resume_process(INT32 pid, long* err_info);
+void svc_change_priority(INT32 pid, INT32 priority, long*err_info);
 void state_print(char* action, INT32 target_pid);
 
 /************************************************************************
@@ -181,6 +182,13 @@ void    svc( SYSTEM_CALL_DATA *SystemCallData ) {
         	INT32 pid = (INT32)SystemCallData->Argument[0];
         	long *err_info = SystemCallData->Argument[1];
         	svc_resume_process(pid, err_info);
+        	break;
+        }
+        case SYSNUM_CHANGE_PRIORITY:{
+        	INT32 pid = (INT32)SystemCallData->Argument[0];
+        	INT32 priority = (INT32)SystemCallData->Argument[1];
+        	long *err_info = SystemCallData->Argument[2];
+        	svc_change_priority(pid, priority, err_info);
         	break;
         }
         default:  
@@ -388,6 +396,12 @@ void svc_suspend_process(INT32 pid,long* err_info){
 	}
 	else *err_info = -2;//if suspend current running process
 	state_print("suspend",pid);
+}
+
+void svc_change_priority(INT32 pid, INT32 priority, long *err_info){
+	//search readyQ
+	//search timerQ
+	//search suspendQ
 }
 
 void clock_interrupt_handler(){
