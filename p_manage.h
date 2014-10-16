@@ -41,5 +41,7 @@ INT32 suspend_process(INT32 pid);
 INT32 resume_process(INT32 pid);
 void add_suspend_queue(PCB *pcb);
 INT32 change_priority_in_ready_queue(INT32 pid, INT32 priority);
+INT32 check_process_in_readyQ(INT32 pid);
+INT32 check_process_in_suspendQ(INT32 pid);
 
 #endif /* P_MANAGE_H_ */

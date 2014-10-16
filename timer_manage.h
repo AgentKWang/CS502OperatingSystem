@@ -24,6 +24,6 @@ timequeue_node* get_timer_queue_head();
 INT32 get_process_id_in_timer_queue(char *process_name);
 PCB* get_pcb_from_timer_queue(INT32 pid);
 INT32 change_priority_in_timer_queue(INT32 pid, INT32 priority);
-
+INT32 check_process_in_timerQ(INT32 pid);
 
 #endif /* TIMER_MANAGE_H_ */

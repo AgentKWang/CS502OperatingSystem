@@ -28,7 +28,7 @@
 #include             "string.h"
 #include 			 "p_manage.h"
 #include			 "timer_manage.h"
-
+#include			 "msg_manage.h"
 
 // These loacations are global and define information about the page table
 extern UINT16        *Z502_PAGE_TBL_ADDR;
@@ -53,6 +53,8 @@ void svc_get_process_id(char* process_name,long* process_id,long* err_info);
 void svc_suspend_process(INT32 pid,long* err_info);
 void svc_resume_process(INT32 pid, long* err_info);
 void svc_change_priority(INT32 pid, INT32 priority, long*err_info);
+void svc_send_message(INT32 target_pid, char* msg, INT32 msg_length, long *err_info);
+void svc_receive_message(INT32 source_pid, char* buffer, INT32 receive_length, INT32 *actual_length, INT32 *actual_source, long* err_info);
 void state_print(char* action, INT32 target_pid);
 
 /************************************************************************
@@ -191,6 +193,24 @@ void    svc( SYSTEM_CALL_DATA *SystemCallData ) {
         	svc_change_priority(pid, priority, err_info);
         	break;
         }
+        case SYSNUM_SEND_MESSAGE:{
+        	INT32 target_pid = (INT32)SystemCallData->Argument[0];
+        	char *msg = SystemCallData->Argument[1];
+        	INT32 msg_length = (INT32)SystemCallData->Argument[2];
+        	long *err_info = SystemCallData->Argument[3];
+        	svc_send_message(target_pid, msg, msg_length, err_info);
+        	break;
+        }
+        case SYSNUM_RECEIVE_MESSAGE:{
+        	INT32 source_pid = (INT32)SystemCallData->Argument[0];
+        	char *buffer = SystemCallData->Argument[1];
+        	INT32 receive_length = (INT32)SystemCallData->Argument[2];
+        	INT32 *actual_length = SystemCallData->Argument[3];
+        	INT32 *actual_pid = SystemCallData->Argument[4];
+        	long *err_info = SystemCallData->Argument[5];
+        	svc_receive_message(source_pid, buffer, receive_length, actual_length, actual_pid, err_info);
+        	break;
+        }
         default:  
             printf( "ERROR!  call_type not recognized!\n" ); 
             printf( "Call_type is - %i\n", call_type);
@@ -275,10 +295,15 @@ void    osInit( int argc, char *argv[]  ) {
     	    	    	    		pcb = create_process((void *)test1h, USER_MODE ,0, "test1h");
     	    	    	    		run_process (pcb);
     	}
+    	else if(strcmp(argv[1],"test1i") == 0 || strcmp(argv[1],"1i") == 0){
+    	    	    	    		printf("test1i is chosen, now run test1i \n");
+    	    	    	    		pcb = create_process((void *)test1i, USER_MODE ,0, "test1i");
+    	    	    	    		run_process (pcb);
+    	}
     }
     else{
-    	printf("No switch set, run test1h now \n");
-    	pcb = create_process( (void *)test1h, USER_MODE ,0, "test1h");
+    	printf("No switch set, run test1i now \n");
+    	pcb = create_process( (void *)test1i, USER_MODE ,0, "test1i");
     	run_process(pcb);
     }
 }                                               // End of osInit
@@ -426,6 +451,46 @@ void svc_change_priority(INT32 pid, INT32 priority, long *err_info){
 		return;
 	}
 	*err_info = -1;
+}
+
+void svc_send_message(INT32 target_pid, char* msg, INT32 msg_length, long *err_info){
+	if(target_pid != -1 && target_pid != (get_current_pcb())->pid){
+		if(check_process_in_readyQ(target_pid)<0){
+			if(check_process_in_suspendQ(target_pid)<0){
+				if(check_process_in_timerQ(target_pid<0)){
+					*err_info = -1;
+					return;
+				}
+			}
+		}
+	}
+	if(msg_length>100){
+		*err_info = -2;
+		return;
+	}
+	INT32 sender_pid = (get_current_pcb())->pid;
+	INT32 need_kick = send_msg(sender_pid, target_pid, msg, msg_length, err_info);
+	if(need_kick) svc_resume_process(target_pid, err_info);
+}
+
+void svc_receive_message(INT32 source_pid, char* buffer, INT32 receive_length, INT32 *actual_length, INT32 *actual_source, long* err_info){
+	if(source_pid != -1 && source_pid != (get_current_pcb())->pid){
+		if(check_process_in_readyQ(source_pid)<0){
+			if(check_process_in_suspendQ(source_pid)<0){
+				if(check_process_in_timerQ(source_pid<0)){
+					*err_info = -1;
+					return;
+				}
+			}
+		}
+	}
+	if(receive_length>100){
+		*err_info = -2;
+		return;
+	}
+	INT32 receiver_pid = (get_current_pcb())->pid;
+	INT32 receive_immediately = receive_msg(receiver_pid, source_pid, buffer, receive_length, actual_length, actual_source, err_info);
+	if(receive_immediately==0) svc_suspend_process(receiver_pid, err_info);
 }
 
 void clock_interrupt_handler(){

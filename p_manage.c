@@ -284,6 +284,36 @@ INT32 change_priority_in_ready_queue(INT32 pid, INT32 priority){
 	}
 }
 
+INT32 check_process_in_readyQ(INT32 pid){ //negative return means not found
+	readyqueue_item *pointer = readyqueue_header.next;
+	INT32 lock_result;
+	READ_MODIFY(MEMORY_INTERLOCK_BASE, 1, TRUE, &lock_result);
+	while(pointer!=-1){
+		if(pointer->pcb->pid==pid){
+			READ_MODIFY(MEMORY_INTERLOCK_BASE, 0, TRUE, &lock_result);
+			return 1;
+		}
+		pointer=pointer->next;
+	}
+	READ_MODIFY(MEMORY_INTERLOCK_BASE, 0, TRUE, &lock_result);
+	return -1;
+}
+
+INT32 check_process_in_suspendQ(INT32 pid){
+	suspendqueue_node *pointer = suspend_queue_head.next;
+	INT32 lock_result;
+	READ_MODIFY(MEMORY_INTERLOCK_BASE + 3, 1, TRUE, &lock_result);
+	while(pointer!=-1){
+		if(pointer->pcb->pid==pid){
+			READ_MODIFY(MEMORY_INTERLOCK_BASE + 3, 0, TRUE, &lock_result);
+			return 1;
+		}
+		pointer = pointer->next;
+	}
+	READ_MODIFY(MEMORY_INTERLOCK_BASE + 3, 0, TRUE, &lock_result);
+	return -1;
+}
+
 void print_suspend_queue(){
 	INT32 lock_result;
 	READ_MODIFY(MEMORY_INTERLOCK_BASE + 3, 1, TRUE, &lock_result);
