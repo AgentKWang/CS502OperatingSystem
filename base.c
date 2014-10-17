@@ -300,10 +300,15 @@ void    osInit( int argc, char *argv[]  ) {
     	    	    	    		pcb = create_process((void *)test1i, USER_MODE ,0, "test1i");
     	    	    	    		run_process (pcb);
     	}
+    	else if(strcmp(argv[1],"test1j") == 0 || strcmp(argv[1],"1j") == 0){
+    	    	    	    	    		printf("test1j is chosen, now run test1j \n");
+    	    	    	    	    		pcb = create_process((void *)test1j, USER_MODE ,0, "test1j");
+    	    	    	    	    		run_process (pcb);
+    	}
     }
     else{
-    	printf("No switch set, run test1i now \n");
-    	pcb = create_process( (void *)test1i, USER_MODE ,0, "test1i");
+    	printf("No switch set, run test1j now \n");
+    	pcb = create_process( (void *)test1j, USER_MODE ,0, "test1j");
     	run_process(pcb);
     }
 }                                               // End of osInit
@@ -433,6 +438,7 @@ void svc_change_priority(INT32 pid, INT32 priority, long *err_info){
 		PCB *pcb = get_current_pcb();
 		pcb->priority = priority;
 		*err_info = ERR_SUCCESS;
+		return;
 	}
 	if(priority<0 || priority > 100){
 		*err_info = -2;

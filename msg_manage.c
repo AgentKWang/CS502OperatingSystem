@@ -21,8 +21,6 @@ INT32 send_msg(INT32 sender_pid, INT32 receiver_pid, char *msg, INT32 length, lo
 			pointer->msg->length = length;
 			strcpy(pointer->msg->msgbody,msg);
 			prev_pointer->next = pointer->next;
-			void *destroy = pointer;
-			free(destroy);
 			MSG_COUNTER--;
 		}
 		prev_pointer = pointer;
@@ -51,7 +49,7 @@ INT32 send_msg(INT32 sender_pid, INT32 receiver_pid, char *msg, INT32 length, lo
 	return send_flag;
 }
 
-INT32 receive_msg(INT32 receiver_pid, INT32 sender_pid, char* buffer, INT32 length, INT32 *actual_length, INT32 actual_sender, long* err_info){//return 1 means the msg is received,
+INT32 receive_msg(INT32 receiver_pid, INT32 sender_pid, char* buffer, INT32 length, INT32 *actual_length, INT32 *actual_sender, long* err_info){//return 1 means the msg is received,
 	msg_list *prev_pointer=&send_list_head, *pointer=send_list_head.next;												//or we need to suspend
 	while(pointer!=-1){
 		if ((pointer->receiver_pid==receiver_pid || pointer->receiver_pid==-1) && (sender_pid==pointer->sender_pid || sender_pid==-1)){
@@ -61,8 +59,8 @@ INT32 receive_msg(INT32 receiver_pid, INT32 sender_pid, char* buffer, INT32 leng
 			}
 			//feed the msg to receiver
 			strcpy(buffer, pointer->msg);
-			actual_length = pointer->msg->length;
-			actual_sender = pointer->msg->actual_sender;
+			*actual_length = pointer->msg->length;
+			*actual_sender = pointer->msg->actual_sender;
 			//remove the node from send list
 			prev_pointer->next = pointer->next;
 			void *destroy = pointer;

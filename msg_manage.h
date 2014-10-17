@@ -24,5 +24,5 @@ typedef struct{
 }msg_list;
 
 INT32 send_msg(INT32 sender_pid, INT32 receiver_pid, char *msg, INT32 length, long* err_info);
-INT32 receive_msg(INT32 receiver_pid, INT32 sender_pid, char* buffer, INT32 length, INT32 *actual_length, INT32 actual_sender, long* err_info);
+INT32 receive_msg(INT32 receiver_pid, INT32 sender_pid, char* buffer, INT32 length, INT32 *actual_length, INT32 *actual_sender, long* err_info);
 #endif /* MSG_MANAGE_H_ */
