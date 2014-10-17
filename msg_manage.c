@@ -17,15 +17,20 @@ INT32 send_msg(INT32 sender_pid, INT32 receiver_pid, char *msg, INT32 length, lo
 	while(pointer!=-1){
 		if((pointer->sender_pid==sender_pid || pointer->sender_pid==-1) &&(pointer->receiver_pid==receiver_pid || receiver_pid==-1)){
 			send_flag++;   //the msg is send immediately
-			pointer->msg->actual_sender = sender_pid;
-			pointer->msg->length = length;
+			*(pointer->msg->actual_sender) = sender_pid;
+			*(pointer->msg->length) = length;
 			strcpy(pointer->msg->msgbody,msg);
 			prev_pointer->next = pointer->next;
-			MSG_COUNTER--;
+			msg_list *to_destroy=pointer;
+			pointer=pointer->next;
+			free(to_destroy);  //free the node's memory space
 		}
-		prev_pointer = pointer;
-		pointer = pointer->next;
+		else{
+			prev_pointer = pointer;
+			pointer = pointer->next;
+		}
 	}
+	if(receiver_pid==-1) receive_list_head.next=-1; //if broadcast msg, all
 	if(send_flag==0){//msg not immediately send
 		if(MSG_COUNTER >= MSG_MAX_NUM){  //exceed the maximum msg list
 			*err_info = -3;
@@ -36,9 +41,11 @@ INT32 send_msg(INT32 sender_pid, INT32 receiver_pid, char *msg, INT32 length, lo
 		node->receiver_pid = receiver_pid;
 		node->next = -1;
 		node->msg = malloc(sizeof(message));
-		node->msg->length = length;
+		node->msg->actual_sender = malloc(sizeof(INT32));
+		node->msg->length = malloc(sizeof(INT32));
 		node->msg->msgbody = malloc(length);
-		node->msg->actual_sender = sender_pid;
+		*(node->msg->length) = length;
+		*(node->msg->actual_sender) = sender_pid;
 		strcpy(node->msg->msgbody,msg);
 		pointer = &send_list_head;
 		while(pointer->next!=-1) pointer=pointer->next;
@@ -53,17 +60,17 @@ INT32 receive_msg(INT32 receiver_pid, INT32 sender_pid, char* buffer, INT32 leng
 	msg_list *prev_pointer=&send_list_head, *pointer=send_list_head.next;												//or we need to suspend
 	while(pointer!=-1){
 		if ((pointer->receiver_pid==receiver_pid || pointer->receiver_pid==-1) && (sender_pid==pointer->sender_pid || sender_pid==-1)){
-			if(length < pointer->msg->length){
+			if(length < *(pointer->msg->length)){
 				*err_info = -3; //buffer not enough
 				return 1; //os will not suspend current process
 			}
 			//feed the msg to receiver
-			strcpy(buffer, pointer->msg);
-			*actual_length = pointer->msg->length;
-			*actual_sender = pointer->msg->actual_sender;
+			strcpy(buffer, pointer->msg->msgbody);
+			*actual_length = *(pointer->msg->length);
+			*actual_sender = *(pointer->msg->actual_sender);
 			//remove the node from send list
 			prev_pointer->next = pointer->next;
-			void *destroy = pointer;
+			msg_list *destroy = pointer;
 			MSG_COUNTER--;
 			free(destroy);
 			//return to os

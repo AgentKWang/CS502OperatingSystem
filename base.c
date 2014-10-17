@@ -429,7 +429,19 @@ void svc_suspend_process(INT32 pid,long* err_info){
 		}
 		else *err_info = suspend_process(pid);
 	}
-	else *err_info = -2;//if suspend current running process
+	else{ //if the process ask to suspend itself
+		if(is_ready_queue_empty()){ //if there's nothing in ready q
+			*err_info = -2 ;
+			return;
+		}
+		else{ // if there's something in readyq, run it.
+			*err_info = suspend_process(pid);
+			state_print("suspend",pid); //check the state first
+			PCB* next_run = dispatcher();
+			run_process(next_run);
+			return; //do not print the state when resume
+		}
+	}
 	state_print("suspend",pid);
 }
 

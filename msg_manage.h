@@ -12,8 +12,8 @@
 
 typedef struct{
 	char *msgbody;
-	INT32 length;
-	INT32 actual_sender;
+	INT32 *length;
+	INT32 *actual_sender;
 }message;
 
 typedef struct{

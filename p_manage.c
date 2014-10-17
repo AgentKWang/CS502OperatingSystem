@@ -192,6 +192,13 @@ PCB* get_pcb_from_ready_queue(INT32 pid){
 suspendqueue_node suspend_queue_head = {0,-1};
 
 INT32 suspend_process(INT32 pid){
+	//we do the check in svc, if the pid is current running
+	//then we can get here only if the readyQ is not empty
+	//so it is safe to suspend ourself
+	if(pid==-1 || pid==current_pcb->pid){
+		add_suspend_queue(current_pcb);
+		return ERR_SUCCESS;
+	}
 	readyqueue_item *prev_pointer=&readyqueue_header, *pointer=readyqueue_header.next;
 	INT32 lock_result;
 	READ_MODIFY(MEMORY_INTERLOCK_BASE, 1, TRUE, &lock_result);
@@ -230,6 +237,17 @@ INT32 resume_process(INT32 pid){
 	INT32 lock_result;
 	suspendqueue_node *pointer = suspend_queue_head.next, *prev_pointer=&suspend_queue_head;
 	READ_MODIFY(MEMORY_INTERLOCK_BASE + 3, 1, TRUE, &lock_result);
+	if(pid==-1){ //pid==-1 means to resume all process that is in the suspendQ, it is used in when broadcasting messages.
+		while(pointer!=-1){
+			prev_pointer = pointer;
+			add_ready_queue(pointer->pcb);
+			pointer=pointer->next;
+			free(prev_pointer);
+		}
+		suspend_queue_head.next = -1; //now suspendQ is empty
+		READ_MODIFY(MEMORY_INTERLOCK_BASE + 3, 0, TRUE, &lock_result);
+		return ERR_SUCCESS;
+	}
 	while(pointer!=-1){
 		if(pointer->pcb->pid==pid) break;
 		prev_pointer = pointer;
@@ -291,7 +309,7 @@ INT32 check_process_in_readyQ(INT32 pid){ //negative return means not found
 	while(pointer!=-1){
 		if(pointer->pcb->pid==pid){
 			READ_MODIFY(MEMORY_INTERLOCK_BASE, 0, TRUE, &lock_result);
-			return 1;
+			return 0;
 		}
 		pointer=pointer->next;
 	}
@@ -306,12 +324,17 @@ INT32 check_process_in_suspendQ(INT32 pid){
 	while(pointer!=-1){
 		if(pointer->pcb->pid==pid){
 			READ_MODIFY(MEMORY_INTERLOCK_BASE + 3, 0, TRUE, &lock_result);
-			return 1;
+			return 0;
 		}
 		pointer = pointer->next;
 	}
 	READ_MODIFY(MEMORY_INTERLOCK_BASE + 3, 0, TRUE, &lock_result);
 	return -1;
+}
+
+INT32 is_ready_queue_empty(){
+	if(readyqueue_header.next==-1) return 1;
+	else return 0;
 }
 
 void print_suspend_queue(){

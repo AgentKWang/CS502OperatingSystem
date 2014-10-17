@@ -110,13 +110,13 @@ PCB* get_pcb_from_timer_queue(INT32 pid){
 }
 
 INT32 check_process_in_timerQ(INT32 pid){
-	suspendqueue_node *pointer = timequeue_header.next;
+	timequeue_node *pointer = timequeue_header.next;
 	INT32 lock_result;
 	READ_MODIFY(MEMORY_INTERLOCK_BASE + 1, 1, TRUE, &lock_result);
 	while(pointer!=-1){
 		if(pointer->pcb->pid==pid){
 			READ_MODIFY(MEMORY_INTERLOCK_BASE + 1, 0, TRUE, &lock_result);
-			return 1;
+			return 0;
 		}
 		pointer = pointer->next;
 	}
