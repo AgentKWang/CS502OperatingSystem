@@ -508,7 +508,10 @@ void svc_receive_message(INT32 source_pid, char* buffer, INT32 receive_length, I
 	}
 	INT32 receiver_pid = (get_current_pcb())->pid;
 	INT32 receive_immediately = receive_msg(receiver_pid, source_pid, buffer, receive_length, actual_length, actual_source, err_info);
-	if(receive_immediately==0) svc_suspend_process(receiver_pid, err_info);
+	if(receive_immediately==0) {
+		svc_suspend_process(receiver_pid, err_info);
+		get_msg();
+	}
 }
 
 void clock_interrupt_handler(){
