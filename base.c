@@ -94,7 +94,14 @@ void    interrupt_handler( void ) {
         printf( "Interrupt_handler: Found device ID %d with status %d\n",
                         device_id, status );
     }
-    clock_interrupt_handler(); //need add switch here
+    switch(device_id){
+    	case TIMER_INTERRUPT:
+    	    clock_interrupt_handler(); //need add switch here
+    	    break;
+        default:
+            printf( "ERROR!  Interrupt device not recognized!\n" );
+            printf( "Call_type is - %i\n", device_id);
+    }
     MEM_WRITE(Z502InterruptClear, &Index ); // Clear out this device - we're done with it
 }                                       /* End of interrupt_handler */
 /************************************************************************
@@ -117,6 +124,15 @@ void    fault_handler( void )
 
     printf( "Fault_handler: Found vector type %d with value %d\n",
                         device_id, status );
+    switch(device_id){
+    	case PRIVILEGED_INSTRUCTION:
+    		printf("Permission Denied!");
+    		CALL(Z502Halt());
+    		break;
+        default:
+            printf( "ERROR!  fault type not recognized!\n" );
+            printf( "Call_type is - %i\n", device_id);
+    }
     // Clear out this device - we're done with it
     MEM_WRITE(Z502InterruptClear, &Index );
 }                                       /* End of fault_handler */
@@ -305,10 +321,15 @@ void    osInit( int argc, char *argv[]  ) {
     	    	    	    	    		pcb = create_process((void *)test1j, USER_MODE ,0, "test1j");
     	    	    	    	    		run_process (pcb);
     	}
+    	else if(strcmp(argv[1],"test1k") == 0 || strcmp(argv[1],"1k") == 0){
+    	    	    	    	    		printf("test1k is chosen, now run test1k \n");
+    	    	    	    	    		pcb = create_process((void *)test1k, USER_MODE ,0, "test1k");
+    	    	    	    	    		run_process (pcb);
+    	}
     }
     else{
-    	printf("No switch set, run test1j now \n");
-    	pcb = create_process( (void *)test1j, USER_MODE ,0, "test1j");
+    	printf("No switch set, run test1k now \n");
+    	pcb = create_process( (void *)test1k, USER_MODE ,0, "test1k");
     	run_process(pcb);
     }
 }                                               // End of osInit

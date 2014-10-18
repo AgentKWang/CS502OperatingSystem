@@ -30,7 +30,6 @@ INT32 send_msg(INT32 sender_pid, INT32 receiver_pid, char *msg, INT32 length, lo
 			pointer = pointer->next;
 		}
 	}
-	if(receiver_pid==-1) receive_list_head.next=-1; //if broadcast msg, all
 	if(send_flag==0){//msg not immediately send
 		if(MSG_COUNTER >= MSG_MAX_NUM){  //exceed the maximum msg list
 			*err_info = -3;
