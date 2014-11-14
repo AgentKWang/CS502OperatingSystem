@@ -330,15 +330,20 @@ void    osInit( int argc, char *argv[]  ) {
     	    	    	    	    		pcb = create_process((void *)test1k, USER_MODE ,0, "test1k");
     	    	    	    	    		run_process (pcb);
     	}
-    	else if(strcmp(argv[1],"test2") == 0 || strcmp(argv[1],"2a") == 0){
+    	else if(strcmp(argv[1],"test2a") == 0 || strcmp(argv[1],"2a") == 0){
     	    	    	    	    	    		printf("test2a is chosen, now run test2a \n");
     	    	    	    	    	    		pcb = create_process((void *)test2a, USER_MODE ,0, "test2a");
     	    	    	    	    	    		run_process (pcb);
     	}
+    	else if(strcmp(argv[1],"test2b") == 0 || strcmp(argv[1],"2b") == 0){
+    	    	    	    	    	    	    		printf("test2b is chosen, now run test2b \n");
+    	    	    	    	    	    	    		pcb = create_process((void *)test2b, USER_MODE ,0, "test2b");
+    	    	    	    	    	    	    		run_process (pcb);
+    	}
     }
     else{
-    	printf("No switch set, run test2a now \n");
-    	pcb = create_process( (void *)test2a, USER_MODE ,0, "test2a");
+    	printf("No switch set, run test2b now \n");
+    	pcb = create_process( (void *)test2b, USER_MODE ,0, "test2b");
     	run_process(pcb);
     }
 }                                               // End of osInit
@@ -587,6 +592,26 @@ void state_print(char* action, INT32 target_pid){
 void page_fault(INT32 vpn){
 	if(Z502_PAGE_TBL_ADDR==0) 	Z502_PAGE_TBL_ADDR = calloc(VIRTUAL_MEM_PAGES,sizeof(short));
 	if(Z502_PAGE_TBL_LENGTH==0) 	Z502_PAGE_TBL_LENGTH = VIRTUAL_MEM_PAGES;
+	if(vpn >= VIRTUAL_MEM_PAGES || vpn < 0 ){ //check if the vpn is legal
+		printf("\n\x1b[34m"
+			   "************************************************************************\n"
+			   "*                                                                      *\n"
+			   "*                    Blue Screen      CS502soft                        *\n"
+			   "*                                                                      *\n"
+			   "*                     Fatal: Illegal Memory Address                    *\n"
+			   "*                        0x%x0f1adc0f1cdba                            *\n"
+			   "*                     Cannot be written or read                        *\n"
+			   "*                                                                      *\n"
+			   "*     If this is the first time you've see this stop error screen,     *\n"
+			   "*     restart your computer. If this screen appears again, follow      *\n"
+			   "*     these steps:                                                     *\n"
+			   "*                                                                      *\n"
+			   "*             Beg professor do not touch illegal page                  *\n"
+			   "*                                                                      *\n"
+			   "************************************************************************\n"
+			   "\x1b[0m",vpn);
+		Z502Halt();
+	}
 	init_page(vpn, get_current_pcb()->pid); //in the mem_management block, os will find a proper phys_page
 	Z502_PAGE_TBL_ADDR[vpn] = Z502_PAGE_TBL_ADDR[vpn] | PTBL_VALID_BIT; //set valid pid
 }
