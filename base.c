@@ -56,6 +56,7 @@ void svc_change_priority(INT32 pid, INT32 priority, long*err_info);
 void svc_send_message(INT32 target_pid, char* msg, INT32 msg_length, long *err_info);
 void svc_receive_message(INT32 source_pid, char* buffer, INT32 receive_length, INT32 *actual_length, INT32 *actual_source, long* err_info);
 void state_print(char* action, INT32 target_pid);
+void page_fault(int vpn);
 
 /************************************************************************
 Internal routine for interrupts.
@@ -128,6 +129,9 @@ void    fault_handler( void )
     	case PRIVILEGED_INSTRUCTION:
     		printf("Permission Denied!");
     		CALL(Z502Halt());
+    		break;
+    	case INVALID_MEMORY:
+    		page_fault(status);
     		break;
         default:
             printf( "ERROR!  fault type not recognized!\n" );
@@ -326,10 +330,15 @@ void    osInit( int argc, char *argv[]  ) {
     	    	    	    	    		pcb = create_process((void *)test1k, USER_MODE ,0, "test1k");
     	    	    	    	    		run_process (pcb);
     	}
+    	else if(strcmp(argv[1],"test2") == 0 || strcmp(argv[1],"2a") == 0){
+    	    	    	    	    	    		printf("test2a is chosen, now run test2a \n");
+    	    	    	    	    	    		pcb = create_process((void *)test2a, USER_MODE ,0, "test2a");
+    	    	    	    	    	    		run_process (pcb);
+    	}
     }
     else{
-    	printf("No switch set, run test1k now \n");
-    	pcb = create_process( (void *)test1k, USER_MODE ,0, "test1k");
+    	printf("No switch set, run test2a now \n");
+    	pcb = create_process( (void *)test2a, USER_MODE ,0, "test2a");
     	run_process(pcb);
     }
 }                                               // End of osInit
@@ -571,3 +580,16 @@ void state_print(char* action, INT32 target_pid){
 	SP_print_line();
 	READ_MODIFY(MEMORY_INTERLOCK_BASE + 2 , 0, TRUE, &lock_result); //unlock the printer
 }
+
+/***
+ * Page Fault Routines--------------------------------------------------------------------
+ */
+void page_fault(INT32 vpn){
+	if(Z502_PAGE_TBL_ADDR==0) 	Z502_PAGE_TBL_ADDR = calloc(VIRTUAL_MEM_PAGES,sizeof(short));
+	if(Z502_PAGE_TBL_LENGTH==0) 	Z502_PAGE_TBL_LENGTH = VIRTUAL_MEM_PAGES;
+	init_page(vpn, get_current_pcb()->pid); //in the mem_management block, os will find a proper phys_page
+	Z502_PAGE_TBL_ADDR[vpn] = Z502_PAGE_TBL_ADDR[vpn] | PTBL_VALID_BIT; //set valid pid
+}
+
+
+
