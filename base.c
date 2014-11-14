@@ -57,6 +57,8 @@ void svc_send_message(INT32 target_pid, char* msg, INT32 msg_length, long *err_i
 void svc_receive_message(INT32 source_pid, char* buffer, INT32 receive_length, INT32 *actual_length, INT32 *actual_source, long* err_info);
 void state_print(char* action, INT32 target_pid);
 void page_fault(int vpn);
+void disk_write(INT32 disk_id, INT32 sector, char* buffer);
+void disk_read(INT32 disk_id, INT32 sector, char* buffer);
 
 /************************************************************************
 Internal routine for interrupts.
@@ -231,6 +233,20 @@ void    svc( SYSTEM_CALL_DATA *SystemCallData ) {
         	svc_receive_message(source_pid, buffer, receive_length, actual_length, actual_pid, err_info);
         	break;
         }
+        case SYSNUM_DISK_WRITE:{
+        	INT32 disk_id = (INT32)SystemCallData->Argument[0];
+        	INT32 sector = (INT32)SystemCallData->Argument[1];
+        	char *buffer = (char*)SystemCallData->Argument[2];
+        	disk_write(disk_id, sector, buffer);
+        	break;
+        }
+        case SYSNUM_DISK_READ:{
+            INT32 disk_id = (INT32)SystemCallData->Argument[0];
+            INT32 sector = (INT32)SystemCallData->Argument[1];
+            char *buffer = (char*)SystemCallData->Argument[2];
+            disk_read(disk_id, sector, buffer);
+            break;
+        }
         default:  
             printf( "ERROR!  call_type not recognized!\n" ); 
             printf( "Call_type is - %i\n", call_type);
@@ -340,10 +356,15 @@ void    osInit( int argc, char *argv[]  ) {
     	    	    	    	    	    	    		pcb = create_process((void *)test2b, USER_MODE ,0, "test2b");
     	    	    	    	    	    	    		run_process (pcb);
     	}
+    	else if(strcmp(argv[1],"test2c") == 0 || strcmp(argv[1],"2c") == 0){
+    	    	    	    	    	    	    	    		printf("test2c is chosen, now run test2c \n");
+    	    	    	    	    	    	    	    		pcb = create_process((void *)test2c, USER_MODE ,0, "test2c");
+    	    	    	    	    	    	    	    		run_process (pcb);
+    	}
     }
     else{
-    	printf("No switch set, run test2b now \n");
-    	pcb = create_process( (void *)test2b, USER_MODE ,0, "test2b");
+    	printf("No switch set, run test2c now \n");
+    	pcb = create_process( (void *)test2c, USER_MODE ,0, "test2c");
     	run_process(pcb);
     }
 }                                               // End of osInit
@@ -616,5 +637,39 @@ void page_fault(INT32 vpn){
 	Z502_PAGE_TBL_ADDR[vpn] = Z502_PAGE_TBL_ADDR[vpn] | PTBL_VALID_BIT; //set valid pid
 }
 
+void disk_write(INT32 disk_id, INT32 sector, char* buffer){
+	INT32 status;
+	MEM_WRITE(Z502DiskSetID, &disk_id);
+	MEM_WRITE(Z502DiskSetSector, &sector);
+	MEM_WRITE(Z502DiskSetBuffer, buffer);
+	INT32 temp = 1; //1 means write in the disk action
+	MEM_WRITE(Z502DiskSetAction, &temp);
+	temp = 0; //0 means start the disk action
+	MEM_READ(Z502DiskStatus, &status);
+	while(status == DEVICE_IN_USE){
+		Z502Idle();
+		MEM_READ(Z502DiskStatus, &status);
+	}
+	if(status == DEVICE_FREE)  MEM_WRITE(Z502DiskStart, &temp);
+	if(status == ERR_BAD_DEVICE_ID) printf("Abort:  I/O Failure \n Bad Disk: %d\n", disk_id);
+	MEM_READ(Z502DiskStatus, &status);
+	if(status == DEVICE_IN_USE) printf("The disk is running now\n");
+	else printf("Error! Disk is not running!\n");
+}
 
-
+void disk_read(INT32 disk_id, INT32 sector, char* buffer){
+	INT32 status;
+	MEM_WRITE(Z502DiskSetID, &disk_id);
+	MEM_WRITE(Z502DiskSetSector, &sector);
+	MEM_WRITE(Z502DiskSetBuffer, buffer);
+	INT32 temp = 0; //0 means read in the disk action
+	MEM_WRITE(Z502DiskSetAction, &temp);
+	MEM_WRITE(Z502DiskStart, &temp);
+	MEM_READ(Z502DiskStatus, &status);
+	while(status == DEVICE_IN_USE){
+		Z502Idle();
+		MEM_READ(Z502DiskStatus, &status);
+	}
+	if(status == DEVICE_FREE)  MEM_WRITE(Z502DiskStart, &temp);
+	if(status == ERR_BAD_DEVICE_ID) printf("Abort:  I/O Failure \n Bad Disk: %d\n", &disk_id);
+}
