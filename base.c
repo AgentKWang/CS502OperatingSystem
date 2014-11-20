@@ -77,8 +77,6 @@ void    interrupt_handler( void ) {
     INT32              device_id;
     INT32              status;
     INT32              Index = 0;
-    static BOOL        remove_this_in_your_code = TRUE;   /** TEMP **/
-    static INT32       how_many_interrupt_entries = 0;    /** TEMP **/
 
     // Get cause of interrupt
     MEM_READ(Z502InterruptDevice, &device_id );
@@ -86,17 +84,10 @@ void    interrupt_handler( void ) {
     MEM_WRITE(Z502InterruptDevice, &device_id );
     // Now read the status of this device
     MEM_READ(Z502InterruptStatus, &status );
-    //printf("Aha! Here is the Interrupt_handler!!");
-    /** REMOVE THE NEXT SIX LINES **/
-    how_many_interrupt_entries++;                         /** TEMP **/
-    if ( remove_this_in_your_code && ( how_many_interrupt_entries < 20 ) )
-        {
-        printf( "Interrupt_handler: Found device ID %d with status %d\n",
-                        device_id, status );
-    }
+
     switch(device_id){
     	case TIMER_INTERRUPT:
-    	    clock_interrupt_handler(); //need add switch here
+    	    clock_interrupt_handler();
     	    break;
         default:
             printf( "ERROR!  Interrupt device not recognized!\n" );
@@ -350,10 +341,10 @@ void svc_sleep(SYSTEM_CALL_DATA *SystemCallData){
 	if(sleeptime <= 0) sleeptime = 1; //if alarm time is negative
 	MEM_WRITE(Z502TimerStart, &sleeptime);
 	//LOCK when do the state print
-	state_print("sleep", current->pid);
+	CALL(state_print("sleep", current->pid));
 	current = dispatcher(); //check if any process wait in ready queue
 	while(current==-1) {
-		Z502Idle();
+		CALL(Z502Idle());
 		current = dispatcher();
 	}
 	state_print("dispatch", current->pid);
@@ -529,7 +520,10 @@ void svc_receive_message(INT32 source_pid, char* buffer, INT32 receive_length, I
 	}
 	INT32 receiver_pid = (get_current_pcb())->pid;
 	INT32 receive_immediately = receive_msg(receiver_pid, source_pid, buffer, receive_length, actual_length, actual_source, err_info);
-	if(receive_immediately==0) svc_suspend_process(receiver_pid, err_info);
+	if(receive_immediately==0) {
+		svc_suspend_process(receiver_pid, err_info);
+		get_msg();
+	}
 }
 
 void clock_interrupt_handler(){

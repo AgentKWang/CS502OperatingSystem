@@ -140,14 +140,6 @@ void add_ready_queue(PCB *pcb){
 
 void run_process(PCB *pcb){
 	current_pcb=pcb; //Always remember the process that is now running
-	/*some code here to remove the pcb from ready_queue
-	 * As far as I'm concerned, a process entered in may be
-	 * from a readyqueue, in this case you need to move it out from the
-	 * readyqueue, or it may be called by the routine in svc where the
-	 * pcb is from a timequeque, and in this case, since the pcb is moved
-	 * out from timequeue already and is going to run right away,
-	 * we do not need to move it out from any queue.
-	 */
 	Z502SwitchContext(SWITCH_CONTEXT_SAVE_MODE, &pcb->context );
 }
 
