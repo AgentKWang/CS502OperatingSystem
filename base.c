@@ -217,7 +217,7 @@ void    svc( SYSTEM_CALL_DATA *SystemCallData ) {
         }
         case SYSNUM_SEND_MESSAGE:{
         	INT32 target_pid = (INT32)SystemCallData->Argument[0];
-        	char *msg = SystemCallData->Argument[1];
+        	char *msg = (char *) SystemCallData->Argument[1];
         	INT32 msg_length = (INT32)SystemCallData->Argument[2];
         	long *err_info = SystemCallData->Argument[3];
         	svc_send_message(target_pid, msg, msg_length, err_info);
@@ -225,10 +225,10 @@ void    svc( SYSTEM_CALL_DATA *SystemCallData ) {
         }
         case SYSNUM_RECEIVE_MESSAGE:{
         	INT32 source_pid = (INT32)SystemCallData->Argument[0];
-        	char *buffer = SystemCallData->Argument[1];
+        	char *buffer = (char *) SystemCallData->Argument[1];
         	INT32 receive_length = (INT32)SystemCallData->Argument[2];
-        	INT32 *actual_length = SystemCallData->Argument[3];
-        	INT32 *actual_pid = SystemCallData->Argument[4];
+        	INT32 *actual_length = (INT32 *) SystemCallData->Argument[3];
+        	INT32 *actual_pid = (INT32 *)SystemCallData->Argument[4];
         	long *err_info = SystemCallData->Argument[5];
         	svc_receive_message(source_pid, buffer, receive_length, actual_length, actual_pid, err_info);
         	break;
@@ -387,7 +387,7 @@ void svc_sleep(SYSTEM_CALL_DATA *SystemCallData){
 	//LOCK when do the state print
 	state_print("sleep", current->pid);
 	current = dispatcher(); //check if any process wait in ready queue
-	while(current==-1) {
+	while((INT32)current==-1) {
 		Z502Idle();
 		current = dispatcher();
 	}
@@ -666,4 +666,10 @@ void disk_read(INT32 disk_id, INT32 sector, char* buffer){
 		MEM_READ(Z502DiskStatus, &status);
 	}
 	if(status == DEVICE_FREE)  MEM_WRITE(Z502DiskStart, &temp);
+	MEM_WRITE(Z502DiskSetID, &disk_id);//Make sure we get the data
+	MEM_READ(Z502DiskStatus, &status);
+	while (status==DEVICE_IN_USE){
+		Z502Idle();
+		MEM_READ(Z502DiskStatus, &status);
+	}
 }

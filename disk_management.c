@@ -32,7 +32,7 @@ PCB* get_next_disk_opt(INT32 disk_id){
 }
 
 void add_disk_opt(PCB* pcb, INT32 disk_id){
-	disk_queue_node* new_node = malloc(sizeof(timequeue_node));
+	disk_queue_node* new_node = malloc(sizeof(disk_queue_node));
 	disk_queue_node* pointer = &disk_queue_header;
 	INT32 lock_result;
 	new_node->pcb = pcb;
