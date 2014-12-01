@@ -651,10 +651,6 @@ void disk_write(INT32 disk_id, INT32 sector, char* buffer){
 		MEM_READ(Z502DiskStatus, &status);
 	}
 	if(status == DEVICE_FREE)  MEM_WRITE(Z502DiskStart, &temp);
-	if(status == ERR_BAD_DEVICE_ID) printf("Abort:  I/O Failure \n Bad Disk: %d\n", disk_id);
-	MEM_READ(Z502DiskStatus, &status);
-	if(status == DEVICE_IN_USE) printf("The disk is running now\n");
-	else printf("Error! Disk is not running!\n");
 }
 
 void disk_read(INT32 disk_id, INT32 sector, char* buffer){
@@ -664,12 +660,10 @@ void disk_read(INT32 disk_id, INT32 sector, char* buffer){
 	MEM_WRITE(Z502DiskSetBuffer, buffer);
 	INT32 temp = 0; //0 means read in the disk action
 	MEM_WRITE(Z502DiskSetAction, &temp);
-	MEM_WRITE(Z502DiskStart, &temp);
 	MEM_READ(Z502DiskStatus, &status);
 	while(status == DEVICE_IN_USE){
 		Z502Idle();
 		MEM_READ(Z502DiskStatus, &status);
 	}
 	if(status == DEVICE_FREE)  MEM_WRITE(Z502DiskStart, &temp);
-	if(status == ERR_BAD_DEVICE_ID) printf("Abort:  I/O Failure \n Bad Disk: %d\n", &disk_id);
 }
