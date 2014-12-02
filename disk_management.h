@@ -17,5 +17,7 @@ typedef struct{
 	struct disk_queue_node* next;
 }disk_queue_node;
 
+PCB* get_next(INT32 disk_id);
+void add_disk_queue(PCB* pcb, INT32 disk_id);
 
 #endif /* DISK_MANAGEMENT_H_ */
