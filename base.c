@@ -65,7 +65,7 @@ Internal routine for interrupts.
 ************************************************************************/
 void clock_interrupt_handler();
 void disk_interrupt_handler(INT32 disk_id);
-
+void transfer_ctrl();
 
 
 
@@ -359,10 +359,15 @@ void    osInit( int argc, char *argv[]  ) {
     	    	    	    	    	    	    	    		pcb = create_process((void *)test2c, USER_MODE ,0, "test2c");
     	    	    	    	    	    	    	    		run_process (pcb);
     	}
+    	else if(strcmp(argv[1],"test2d") == 0 || strcmp(argv[1],"2d") == 0){
+    	    	    	    	    	    	    	    	    		printf("test2d is chosen, now run test2d \n");
+    	    	    	    	    	    	    	    	    		pcb = create_process((void *)test2d, USER_MODE ,0, "test2d");
+    	    	    	    	    	    	    	    	    		run_process (pcb);
+    	}
     }
     else{
-    	printf("No switch set, run test2c now \n");
-    	pcb = create_process( (void *)test2c, USER_MODE ,0, "test2c");
+    	printf("No switch set, run test2d now \n");
+    	pcb = create_process( (void *)test2d, USER_MODE ,0, "test2d");
     	run_process(pcb);
     }
 }                                               // End of osInit
@@ -653,16 +658,23 @@ void disk_write(INT32 disk_id, INT32 sector, char* buffer){
 	if(status == DEVICE_FREE){
 		add_disk_queue(current, disk_id);
 		MEM_WRITE(Z502DiskStart, &temp); //the disk is start
-		current = dispatcher(); //check if any process wait in ready queue
-		if((INT32)current==-1){
-			Z502Idle();
-			while(current==-1){
-				current = dispatcher();
-			}
-		}
-		run_process(current);
 	}
-	else printf("The disk is not running!\n");
+	else if(status==DEVICE_IN_USE){
+		while(status==DEVICE_IN_USE){
+			add_disk_queue(current, disk_id);
+			transfer_ctrl();
+			MEM_WRITE(Z502DiskSetID, &disk_id);
+			MEM_READ(Z502DiskStatus, &status);
+		}
+		MEM_WRITE(Z502DiskSetID, &disk_id);
+		MEM_WRITE(Z502DiskSetSector, &sector);
+		MEM_WRITE(Z502DiskSetBuffer, buffer);
+		temp = 1; //write operation
+		MEM_WRITE(Z502DiskSetAction, &temp);
+		temp = 0; //start the disk
+		MEM_WRITE(Z502DiskStart, &temp);
+	}
+	transfer_ctrl();
 }
 
 void disk_read(INT32 disk_id, INT32 sector, char* buffer){
@@ -674,17 +686,31 @@ void disk_read(INT32 disk_id, INT32 sector, char* buffer){
 	INT32 temp = 0; //0 means read in the disk action
 	MEM_WRITE(Z502DiskSetAction, &temp);
 	MEM_READ(Z502DiskStatus, &status);
-	if(status == DEVICE_FREE){
+	if(status == DEVICE_FREE){//start the disk if disk if free
 		add_disk_queue(current, disk_id);
-		MEM_WRITE(Z502DiskStart, &temp); //start the disk
-		current = dispatcher(); //check if any process wait in ready queue
-		while((INT32)current==-1) {
-			Z502Idle();
-			current = dispatcher();
+		MEM_WRITE(Z502DiskStart, &temp);
+	}
+	else if(status==DEVICE_IN_USE){
+		while(status==DEVICE_IN_USE){
+			add_disk_queue(current, disk_id);
+			transfer_ctrl();
+			MEM_WRITE(Z502DiskSetID, &disk_id);
+			MEM_READ(Z502DiskStatus, &status);
 		}
-		run_process(current);
+		MEM_WRITE(Z502DiskSetID, &disk_id);
+		MEM_WRITE(Z502DiskSetSector, &sector);
+		MEM_WRITE(Z502DiskSetBuffer, buffer);
+		MEM_WRITE(Z502DiskSetAction, &temp);
+		MEM_WRITE(Z502DiskStart, &temp);
 	}
-	else{
-		printf("Disk is not reading!!!\n");
+	transfer_ctrl();
+}
+
+void transfer_ctrl(){//check if any process wait in ready queue,find another process to run
+	PCB *target = dispatcher();
+	while((INT32)target==-1) {
+		Z502Idle();
+		target = dispatcher();
 	}
+	run_process(target);
 }
