@@ -18,6 +18,7 @@ typedef struct{
 }disk_queue_node;
 
 PCB* get_next(INT32 disk_id);
-void add_disk_queue(PCB* pcb, INT32 disk_id);
+void disk_read(INT32 disk_id, INT32 sector, char* buffer);
+void disk_write(INT32 disk_id, INT32 sector, char* buffer);
 
 #endif /* DISK_MANAGEMENT_H_ */

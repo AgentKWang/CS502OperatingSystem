@@ -43,3 +43,73 @@ void add_disk_queue(PCB* pcb, INT32 disk_id){
 	pointer->next = new_node;
 	READ_MODIFY(DISK_QUEUE_LOCK, 0, TRUE, &lock_result);
 }
+
+void disk_write(INT32 disk_id, INT32 sector, char* buffer){
+	INT32 status;
+	PCB* current = get_current_pcb();
+	MEM_WRITE(Z502DiskSetID, &disk_id);
+	MEM_WRITE(Z502DiskSetSector, &sector);
+	MEM_WRITE(Z502DiskSetBuffer, buffer);
+	INT32 temp = 1; //1 means write in the disk action
+	MEM_WRITE(Z502DiskSetAction, &temp);
+	temp = 0; //0 means start the disk action
+	MEM_READ(Z502DiskStatus, &status);
+	if(status == DEVICE_FREE){
+		add_disk_queue(current, disk_id);
+		MEM_WRITE(Z502DiskStart, &temp); //the disk is start
+	}
+	else if(status==DEVICE_IN_USE){
+		while(status==DEVICE_IN_USE){
+			add_disk_queue(current, disk_id);
+			transfer_ctrl();
+			MEM_WRITE(Z502DiskSetID, &disk_id);
+			MEM_READ(Z502DiskStatus, &status);
+		}
+		MEM_WRITE(Z502DiskSetID, &disk_id);
+		MEM_WRITE(Z502DiskSetSector, &sector);
+		MEM_WRITE(Z502DiskSetBuffer, buffer);
+		temp = 1; //write operation
+		MEM_WRITE(Z502DiskSetAction, &temp);
+		temp = 0; //start the disk
+		MEM_WRITE(Z502DiskStart, &temp);
+	}
+	transfer_ctrl();
+}
+
+void disk_read(INT32 disk_id, INT32 sector, char* buffer){
+	INT32 status;
+	PCB *current = get_current_pcb();
+	MEM_WRITE(Z502DiskSetID, &disk_id);
+	MEM_WRITE(Z502DiskSetSector, &sector);
+	MEM_WRITE(Z502DiskSetBuffer, buffer);
+	INT32 temp = 0; //0 means read in the disk action
+	MEM_WRITE(Z502DiskSetAction, &temp);
+	MEM_READ(Z502DiskStatus, &status);
+	if(status == DEVICE_FREE){//start the disk if disk if free
+		add_disk_queue(current, disk_id);
+		MEM_WRITE(Z502DiskStart, &temp);
+	}
+	else if(status==DEVICE_IN_USE){
+		while(status==DEVICE_IN_USE){
+			add_disk_queue(current, disk_id);
+			transfer_ctrl();
+			MEM_WRITE(Z502DiskSetID, &disk_id);
+			MEM_READ(Z502DiskStatus, &status);
+		}
+		MEM_WRITE(Z502DiskSetID, &disk_id);
+		MEM_WRITE(Z502DiskSetSector, &sector);
+		MEM_WRITE(Z502DiskSetBuffer, buffer);
+		MEM_WRITE(Z502DiskSetAction, &temp);
+		MEM_WRITE(Z502DiskStart, &temp);
+	}
+	transfer_ctrl();
+}
+
+void transfer_ctrl(){//check if any process wait in ready queue,find another process to run
+	PCB *target = dispatcher();
+	while((INT32)target==-1) {
+		Z502Idle();
+		target = dispatcher();
+	}
+	run_process(target);
+}

@@ -290,74 +290,84 @@ void    osInit( int argc, char *argv[]  ) {
     		run_process (pcb);
     	}
     	else if(strcmp(argv[1],"test1c") == 0 || strcmp(argv[1],"1c") == 0){
-    	    		printf("test1c is chosen, now run test1c \n");
-    	    		pcb = create_process((void *)test1c, USER_MODE ,0, "test1c");
-    	    		run_process (pcb);
+			printf("test1c is chosen, now run test1c \n");
+			pcb = create_process((void *)test1c, USER_MODE ,0, "test1c");
+			run_process (pcb);
     	}
     	else if(strcmp(argv[1],"test1d") == 0 || strcmp(argv[1],"1d") == 0){
-    	    	    		printf("test1d is chosen, now run test1d \n");
-    	    	    		pcb = create_process((void *)test1d, USER_MODE ,0, "test1d");
-    	    	    		run_process (pcb);
+			printf("test1d is chosen, now run test1d \n");
+			pcb = create_process((void *)test1d, USER_MODE ,0, "test1d");
+			run_process (pcb);
     	}
     	else if(strcmp(argv[1],"test1e") == 0 || strcmp(argv[1],"1e") == 0){
-    	    	    		printf("test1e is chosen, now run test1e \n");
-    	    	    		pcb = create_process((void *)test1e, USER_MODE ,0, "test1e");
-    	    	    		run_process (pcb);
+			printf("test1e is chosen, now run test1e \n");
+			pcb = create_process((void *)test1e, USER_MODE ,0, "test1e");
+			run_process (pcb);
     	}
     	else if(strcmp(argv[1],"test1f") == 0 || strcmp(argv[1],"1f") == 0){
-    	    	    	    		printf("test1f is chosen, now run test1f \n");
-    	    	    	    		pcb = create_process((void *)test1f, USER_MODE ,0, "test1f");
-    	    	    	    		run_process (pcb);
+			printf("test1f is chosen, now run test1f \n");
+			pcb = create_process((void *)test1f, USER_MODE ,0, "test1f");
+			run_process (pcb);
     	}
     	else if(strcmp(argv[1],"test1g") == 0 || strcmp(argv[1],"1g") == 0){
-    	    	    	    		printf("test1g is chosen, now run test1g \n");
-    	    	    	    		pcb = create_process((void *)test1g, USER_MODE ,0, "test1g");
-    	    	    	    		run_process (pcb);
+			printf("test1g is chosen, now run test1g \n");
+			pcb = create_process((void *)test1g, USER_MODE ,0, "test1g");
+			run_process (pcb);
     	}
     	else if(strcmp(argv[1],"test1h") == 0 || strcmp(argv[1],"1h") == 0){
-    	    	    	    		printf("test1h is chosen, now run test1h \n");
-    	    	    	    		pcb = create_process((void *)test1h, USER_MODE ,0, "test1h");
-    	    	    	    		run_process (pcb);
+			printf("test1h is chosen, now run test1h \n");
+			pcb = create_process((void *)test1h, USER_MODE ,0, "test1h");
+			run_process (pcb);
     	}
     	else if(strcmp(argv[1],"test1i") == 0 || strcmp(argv[1],"1i") == 0){
-    	    	    	    		printf("test1i is chosen, now run test1i \n");
-    	    	    	    		pcb = create_process((void *)test1i, USER_MODE ,0, "test1i");
-    	    	    	    		run_process (pcb);
+			printf("test1i is chosen, now run test1i \n");
+			pcb = create_process((void *)test1i, USER_MODE ,0, "test1i");
+			run_process (pcb);
     	}
     	else if(strcmp(argv[1],"test1j") == 0 || strcmp(argv[1],"1j") == 0){
-    	    	    	    	    		printf("test1j is chosen, now run test1j \n");
-    	    	    	    	    		pcb = create_process((void *)test1j, USER_MODE ,0, "test1j");
-    	    	    	    	    		run_process (pcb);
+			printf("test1j is chosen, now run test1j \n");
+			pcb = create_process((void *)test1j, USER_MODE ,0, "test1j");
+			run_process (pcb);
     	}
     	else if(strcmp(argv[1],"test1k") == 0 || strcmp(argv[1],"1k") == 0){
-    	    	    	    	    		printf("test1k is chosen, now run test1k \n");
-    	    	    	    	    		pcb = create_process((void *)test1k, USER_MODE ,0, "test1k");
-    	    	    	    	    		run_process (pcb);
+			printf("test1k is chosen, now run test1k \n");
+			pcb = create_process((void *)test1k, USER_MODE ,0, "test1k");
+			run_process (pcb);
     	}
     	else if(strcmp(argv[1],"test2a") == 0 || strcmp(argv[1],"2a") == 0){
-    	    	    	    	    	    		printf("test2a is chosen, now run test2a \n");
-    	    	    	    	    	    		pcb = create_process((void *)test2a, USER_MODE ,0, "test2a");
-    	    	    	    	    	    		run_process (pcb);
+			printf("test2a is chosen, now run test2a \n");
+			pcb = create_process((void *)test2a, USER_MODE ,0, "test2a");
+			run_process (pcb);
     	}
     	else if(strcmp(argv[1],"test2b") == 0 || strcmp(argv[1],"2b") == 0){
-    	    	    	    	    	    	    		printf("test2b is chosen, now run test2b \n");
-    	    	    	    	    	    	    		pcb = create_process((void *)test2b, USER_MODE ,0, "test2b");
-    	    	    	    	    	    	    		run_process (pcb);
+			printf("test2b is chosen, now run test2b \n");
+			pcb = create_process((void *)test2b, USER_MODE ,0, "test2b");
+			run_process (pcb);
     	}
     	else if(strcmp(argv[1],"test2c") == 0 || strcmp(argv[1],"2c") == 0){
-    	    	    	    	    	    	    	    		printf("test2c is chosen, now run test2c \n");
-    	    	    	    	    	    	    	    		pcb = create_process((void *)test2c, USER_MODE ,0, "test2c");
-    	    	    	    	    	    	    	    		run_process (pcb);
+			printf("test2c is chosen, now run test2c \n");
+			pcb = create_process((void *)test2c, USER_MODE ,0, "test2c");
+			run_process (pcb);
     	}
     	else if(strcmp(argv[1],"test2d") == 0 || strcmp(argv[1],"2d") == 0){
-    	    	    	    	    	    	    	    	    		printf("test2d is chosen, now run test2d \n");
-    	    	    	    	    	    	    	    	    		pcb = create_process((void *)test2d, USER_MODE ,0, "test2d");
-    	    	    	    	    	    	    	    	    		run_process (pcb);
+			printf("test2d is chosen, now run test2d \n");
+			pcb = create_process((void *)test2d, USER_MODE ,0, "test2d");
+			run_process (pcb);
     	}
+    	else if(strcmp(argv[1],"test2e") == 0 || strcmp(argv[1],"2e") == 0){
+			printf("test2e is chosen, now run test2e \n");
+			pcb = create_process((void *)test2e, USER_MODE ,0, "test2e");
+			run_process (pcb);
+    	}
+    	else if(strcmp(argv[1],"test2f") == 0 || strcmp(argv[1],"2f") == 0){
+			printf("test2f is chosen, now run test2f \n");
+			pcb = create_process((void *)test2f, USER_MODE ,0, "test2f");
+			run_process (pcb);
+		}
     }
     else{
-    	printf("No switch set, run test2d now \n");
-    	pcb = create_process( (void *)test2d, USER_MODE ,0, "test2d");
+    	printf("No switch set, run test2f now \n");
+    	pcb = create_process( (void *)test2f, USER_MODE ,0, "test2f");
     	run_process(pcb);
     }
 }                                               // End of osInit
@@ -635,75 +645,4 @@ void page_fault(INT32 vpn){
 		Z502Halt();
 	}
 	init_page(vpn, get_current_pcb()->pid); //in the mem_management block, os will find a proper phys_page
-	Z502_PAGE_TBL_ADDR[vpn] = Z502_PAGE_TBL_ADDR[vpn] | PTBL_VALID_BIT; //set valid pid
-}
-
-void disk_write(INT32 disk_id, INT32 sector, char* buffer){
-	INT32 status;
-	PCB* current = get_current_pcb();
-	MEM_WRITE(Z502DiskSetID, &disk_id);
-	MEM_WRITE(Z502DiskSetSector, &sector);
-	MEM_WRITE(Z502DiskSetBuffer, buffer);
-	INT32 temp = 1; //1 means write in the disk action
-	MEM_WRITE(Z502DiskSetAction, &temp);
-	temp = 0; //0 means start the disk action
-	MEM_READ(Z502DiskStatus, &status);
-	if(status == DEVICE_FREE){
-		add_disk_queue(current, disk_id);
-		MEM_WRITE(Z502DiskStart, &temp); //the disk is start
-	}
-	else if(status==DEVICE_IN_USE){
-		while(status==DEVICE_IN_USE){
-			add_disk_queue(current, disk_id);
-			transfer_ctrl();
-			MEM_WRITE(Z502DiskSetID, &disk_id);
-			MEM_READ(Z502DiskStatus, &status);
-		}
-		MEM_WRITE(Z502DiskSetID, &disk_id);
-		MEM_WRITE(Z502DiskSetSector, &sector);
-		MEM_WRITE(Z502DiskSetBuffer, buffer);
-		temp = 1; //write operation
-		MEM_WRITE(Z502DiskSetAction, &temp);
-		temp = 0; //start the disk
-		MEM_WRITE(Z502DiskStart, &temp);
-	}
-	transfer_ctrl();
-}
-
-void disk_read(INT32 disk_id, INT32 sector, char* buffer){
-	INT32 status;
-	PCB *current = get_current_pcb();
-	MEM_WRITE(Z502DiskSetID, &disk_id);
-	MEM_WRITE(Z502DiskSetSector, &sector);
-	MEM_WRITE(Z502DiskSetBuffer, buffer);
-	INT32 temp = 0; //0 means read in the disk action
-	MEM_WRITE(Z502DiskSetAction, &temp);
-	MEM_READ(Z502DiskStatus, &status);
-	if(status == DEVICE_FREE){//start the disk if disk if free
-		add_disk_queue(current, disk_id);
-		MEM_WRITE(Z502DiskStart, &temp);
-	}
-	else if(status==DEVICE_IN_USE){
-		while(status==DEVICE_IN_USE){
-			add_disk_queue(current, disk_id);
-			transfer_ctrl();
-			MEM_WRITE(Z502DiskSetID, &disk_id);
-			MEM_READ(Z502DiskStatus, &status);
-		}
-		MEM_WRITE(Z502DiskSetID, &disk_id);
-		MEM_WRITE(Z502DiskSetSector, &sector);
-		MEM_WRITE(Z502DiskSetBuffer, buffer);
-		MEM_WRITE(Z502DiskSetAction, &temp);
-		MEM_WRITE(Z502DiskStart, &temp);
-	}
-	transfer_ctrl();
-}
-
-void transfer_ctrl(){//check if any process wait in ready queue,find another process to run
-	PCB *target = dispatcher();
-	while((INT32)target==-1) {
-		Z502Idle();
-		target = dispatcher();
-	}
-	run_process(target);
 }
