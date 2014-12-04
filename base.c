@@ -113,8 +113,8 @@ void    fault_handler( void )
     // Now read the status of this device
     MEM_READ(Z502InterruptStatus, &status );
 
-    printf( "Fault_handler: Found vector type %d with value %d\n",
-                        device_id, status );
+    //printf( "Fault_handler: Found vector type %d with value %d\n",
+                        //device_id, status );
     switch(device_id){
     	case PRIVILEGED_INSTRUCTION:
     		printf("Permission Denied!");
@@ -423,7 +423,7 @@ void svc_terminate_process(SYSTEM_CALL_DATA *SystemCallData){
 	INT32 result=terminate_process(pid);
 	*(SystemCallData->Argument[1]) = result;
 	PCB *pcb_to_run = dispatcher();
-	if(pcb_to_run!=-1) run_process(pcb_to_run);
+	if((INT32)pcb_to_run!=-1) run_process(pcb_to_run);
 	else {
 		//check if there's anything in timerQ
 		timequeue_node* timeq_head = get_timer_queue_head();
@@ -476,10 +476,10 @@ void svc_resume_process(INT32 pid, long* err_info){
 void svc_suspend_process(INT32 pid,long* err_info){
 	PCB *current_run = get_current_pcb();
 	if(current_run->pid!=pid && pid!=-1){
-		PCB* pcb=(INT32 *)get_pcb_from_ready_queue(pid);
-		if(pcb==-1){
+		PCB* pcb = get_pcb_from_ready_queue(pid);
+		if((INT32)pcb==-1){
 			pcb = get_pcb_from_timer_queue(pid);
-			if(pcb==-1){
+			if((INT32)pcb==-1){
 				*err_info = -1;
 			}
 			else{
