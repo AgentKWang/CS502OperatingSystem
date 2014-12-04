@@ -22,7 +22,8 @@ void clear_touched(){
 }
 
 INT32 find_free_phys_page(){
-	for(int i=0; i<PHYS_MEM_PGS; i++){
+	int i; //Initialization in for loop is only allowed in C99
+	for(i=0; i<PHYS_MEM_PGS; i++){
 		if(phys_mem[i].used==FALSE){
 			return i;
 		}

@@ -7,10 +7,11 @@
 
 
 
-readyqueue_item readyqueue_header = {0,-1};
+readyqueue_item readyqueue_header = {0, -1};
 PCB *current_pcb;
 INT32 process_counter=0; //count how many process have been created
 INT32 pid_counter=0;
+INT32 terminate_process(INT32 pid);
 
 void print_ready_queue(){
 	INT32 lock_result;

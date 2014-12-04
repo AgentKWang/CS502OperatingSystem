@@ -64,8 +64,8 @@ void disk_read(INT32 disk_id, INT32 sector, char* buffer);
 Internal routine for interrupts.
 ************************************************************************/
 void clock_interrupt_handler();
-
-
+void disk_interrupt_handler(INT32 disk_id);
+void transfer_ctrl();
 
 
 
@@ -87,14 +87,11 @@ void    interrupt_handler( void ) {
     MEM_WRITE(Z502InterruptDevice, &device_id );
     // Now read the status of this device
     MEM_READ(Z502InterruptStatus, &status );
-
-    switch(device_id){
-    	case TIMER_INTERRUPT:
-    	    clock_interrupt_handler();
-    	    break;
-        default:
-            printf( "ERROR!  Interrupt device not recognized!\n" );
-            printf( "Call_type is - %i\n", device_id);
+    if(device_id==TIMER_INTERRUPT)  clock_interrupt_handler(); //need add switch here
+    else if(device_id>=DISK_INTERRUPT && device_id<=LARGEST_STAT_VECTOR_INDEX) disk_interrupt_handler(device_id-DISK_INTERRUPT+1);
+    else{
+		printf( "ERROR!  Interrupt device not recognized!\n" );
+		printf( "Call_type is - %i\n", device_id);
     }
     MEM_WRITE(Z502InterruptClear, &Index ); // Clear out this device - we're done with it
 }                                       /* End of interrupt_handler */
@@ -208,7 +205,7 @@ void    svc( SYSTEM_CALL_DATA *SystemCallData ) {
         }
         case SYSNUM_SEND_MESSAGE:{
         	INT32 target_pid = (INT32)SystemCallData->Argument[0];
-        	char *msg = SystemCallData->Argument[1];
+        	char *msg = (char *) SystemCallData->Argument[1];
         	INT32 msg_length = (INT32)SystemCallData->Argument[2];
         	long *err_info = SystemCallData->Argument[3];
         	svc_send_message(target_pid, msg, msg_length, err_info);
@@ -216,10 +213,10 @@ void    svc( SYSTEM_CALL_DATA *SystemCallData ) {
         }
         case SYSNUM_RECEIVE_MESSAGE:{
         	INT32 source_pid = (INT32)SystemCallData->Argument[0];
-        	char *buffer = SystemCallData->Argument[1];
+        	char *buffer = (char *) SystemCallData->Argument[1];
         	INT32 receive_length = (INT32)SystemCallData->Argument[2];
-        	INT32 *actual_length = SystemCallData->Argument[3];
-        	INT32 *actual_pid = SystemCallData->Argument[4];
+        	INT32 *actual_length = (INT32 *) SystemCallData->Argument[3];
+        	INT32 *actual_pid = (INT32 *)SystemCallData->Argument[4];
         	long *err_info = SystemCallData->Argument[5];
         	svc_receive_message(source_pid, buffer, receive_length, actual_length, actual_pid, err_info);
         	break;
@@ -352,10 +349,15 @@ void    osInit( int argc, char *argv[]  ) {
     	    	    	    	    	    	    	    		pcb = create_process((void *)test2c, USER_MODE ,0, "test2c");
     	    	    	    	    	    	    	    		run_process (pcb);
     	}
+    	else if(strcmp(argv[1],"test2d") == 0 || strcmp(argv[1],"2d") == 0){
+    	    	    	    	    	    	    	    	    		printf("test2d is chosen, now run test2d \n");
+    	    	    	    	    	    	    	    	    		pcb = create_process((void *)test2d, USER_MODE ,0, "test2d");
+    	    	    	    	    	    	    	    	    		run_process (pcb);
+    	}
     }
     else{
-    	printf("No switch set, run test2c now \n");
-    	pcb = create_process( (void *)test2c, USER_MODE ,0, "test2c");
+    	printf("No switch set, run test2d now \n");
+    	pcb = create_process( (void *)test2d, USER_MODE ,0, "test2d");
     	run_process(pcb);
     }
 }                                               // End of osInit
@@ -378,8 +380,8 @@ void svc_sleep(SYSTEM_CALL_DATA *SystemCallData){
 	//LOCK when do the state print
 	CALL(state_print("sleep", current->pid));
 	current = dispatcher(); //check if any process wait in ready queue
-	while(current==-1) {
-		CALL(Z502Idle());
+	while((INT32)current==-1) {
+		Z502Idle();
 		current = dispatcher();
 	}
 	state_print("dispatch", current->pid);
@@ -415,9 +417,9 @@ void svc_terminate_process(SYSTEM_CALL_DATA *SystemCallData){
 	else {
 		//check if there's anything in timerQ
 		timequeue_node* timeq_head = get_timer_queue_head();
-		if (timeq_head->next == -1) Z502Halt();
+		if ((INT32)timeq_head->next == -1) Z502Halt();
 		else {
-			while(pcb_to_run==-1){
+			while((INT32)pcb_to_run==-1){
 				Z502Idle();
 				pcb_to_run = dispatcher();
 			}
@@ -452,7 +454,7 @@ void svc_resume_process(INT32 pid, long* err_info){
 	INT32 result = resume_process(pid);
 	if(result==-1){
 		PCB* pcb=get_pcb_from_timer_queue(pid);
-		if(pcb!=-1){
+		if((INT32)pcb!=-1){
 			pcb->suspend_flag = 0;
 		}
 		else *err_info=-1;
@@ -464,7 +466,7 @@ void svc_resume_process(INT32 pid, long* err_info){
 void svc_suspend_process(INT32 pid,long* err_info){
 	PCB *current_run = get_current_pcb();
 	if(current_run->pid!=pid && pid!=-1){
-		PCB* pcb=get_pcb_from_ready_queue(pid);
+		PCB* pcb=(INT32 *)get_pcb_from_ready_queue(pid);
 		if(pcb==-1){
 			pcb = get_pcb_from_timer_queue(pid);
 			if(pcb==-1){
@@ -584,6 +586,11 @@ void clock_interrupt_handler(){
 	}
 }
 
+void disk_interrupt_handler(INT32 disk_id){
+	PCB* next_to_run = get_next(disk_id);
+	add_ready_queue(next_to_run);
+}
+
 void state_print(char* action, INT32 target_pid){
 	INT32 current_time;
 	MEM_READ( Z502ClockStatus, &current_time); //read current time
@@ -633,6 +640,7 @@ void page_fault(INT32 vpn){
 
 void disk_write(INT32 disk_id, INT32 sector, char* buffer){
 	INT32 status;
+	PCB* current = get_current_pcb();
 	MEM_WRITE(Z502DiskSetID, &disk_id);
 	MEM_WRITE(Z502DiskSetSector, &sector);
 	MEM_WRITE(Z502DiskSetBuffer, buffer);
@@ -640,30 +648,62 @@ void disk_write(INT32 disk_id, INT32 sector, char* buffer){
 	MEM_WRITE(Z502DiskSetAction, &temp);
 	temp = 0; //0 means start the disk action
 	MEM_READ(Z502DiskStatus, &status);
-	while(status == DEVICE_IN_USE){
-		Z502Idle();
-		MEM_READ(Z502DiskStatus, &status);
+	if(status == DEVICE_FREE){
+		add_disk_queue(current, disk_id);
+		MEM_WRITE(Z502DiskStart, &temp); //the disk is start
 	}
-	if(status == DEVICE_FREE)  MEM_WRITE(Z502DiskStart, &temp);
-	if(status == ERR_BAD_DEVICE_ID) printf("Abort:  I/O Failure \n Bad Disk: %d\n", disk_id);
-	MEM_READ(Z502DiskStatus, &status);
-	if(status == DEVICE_IN_USE) printf("The disk is running now\n");
-	else printf("Error! Disk is not running!\n");
+	else if(status==DEVICE_IN_USE){
+		while(status==DEVICE_IN_USE){
+			add_disk_queue(current, disk_id);
+			transfer_ctrl();
+			MEM_WRITE(Z502DiskSetID, &disk_id);
+			MEM_READ(Z502DiskStatus, &status);
+		}
+		MEM_WRITE(Z502DiskSetID, &disk_id);
+		MEM_WRITE(Z502DiskSetSector, &sector);
+		MEM_WRITE(Z502DiskSetBuffer, buffer);
+		temp = 1; //write operation
+		MEM_WRITE(Z502DiskSetAction, &temp);
+		temp = 0; //start the disk
+		MEM_WRITE(Z502DiskStart, &temp);
+	}
+	transfer_ctrl();
 }
 
 void disk_read(INT32 disk_id, INT32 sector, char* buffer){
 	INT32 status;
+	PCB *current = get_current_pcb();
 	MEM_WRITE(Z502DiskSetID, &disk_id);
 	MEM_WRITE(Z502DiskSetSector, &sector);
 	MEM_WRITE(Z502DiskSetBuffer, buffer);
 	INT32 temp = 0; //0 means read in the disk action
 	MEM_WRITE(Z502DiskSetAction, &temp);
-	MEM_WRITE(Z502DiskStart, &temp);
 	MEM_READ(Z502DiskStatus, &status);
-	while(status == DEVICE_IN_USE){
-		Z502Idle();
-		MEM_READ(Z502DiskStatus, &status);
+	if(status == DEVICE_FREE){//start the disk if disk if free
+		add_disk_queue(current, disk_id);
+		MEM_WRITE(Z502DiskStart, &temp);
 	}
-	if(status == DEVICE_FREE)  MEM_WRITE(Z502DiskStart, &temp);
-	if(status == ERR_BAD_DEVICE_ID) printf("Abort:  I/O Failure \n Bad Disk: %d\n", &disk_id);
+	else if(status==DEVICE_IN_USE){
+		while(status==DEVICE_IN_USE){
+			add_disk_queue(current, disk_id);
+			transfer_ctrl();
+			MEM_WRITE(Z502DiskSetID, &disk_id);
+			MEM_READ(Z502DiskStatus, &status);
+		}
+		MEM_WRITE(Z502DiskSetID, &disk_id);
+		MEM_WRITE(Z502DiskSetSector, &sector);
+		MEM_WRITE(Z502DiskSetBuffer, buffer);
+		MEM_WRITE(Z502DiskSetAction, &temp);
+		MEM_WRITE(Z502DiskStart, &temp);
+	}
+	transfer_ctrl();
+}
+
+void transfer_ctrl(){//check if any process wait in ready queue,find another process to run
+	PCB *target = dispatcher();
+	while((INT32)target==-1) {
+		Z502Idle();
+		target = dispatcher();
+	}
+	run_process(target);
 }
