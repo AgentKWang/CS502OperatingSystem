@@ -11,9 +11,10 @@ void init_page(INT32 vpn, INT32 pid){
 		Z502_PAGE_TBL_ADDR[vpn] = Z502_PAGE_TBL_ADDR[vpn] | (blank_page & PTBL_PHYS_PG_NO);
 		phys_mem[blank_page].pid = pid;
 		phys_mem[blank_page].used = TRUE;
+		phys_mem[blank_page].page_table_entry = &Z502_PAGE_TBL_ADDR[vpn];
 	}
 	else{
-		printf("errrrrrrrrrrrr\nerrrrrrrrrrrr\n");
+		printf("An error has happened in locate physical memory: find_free_phys_page returns -1 \n");
 	}
 }
 

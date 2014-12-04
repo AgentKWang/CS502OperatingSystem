@@ -15,6 +15,7 @@ extern INT16         Z502_PAGE_TBL_LENGTH;
 typedef struct{
 	INT32 pid;
 	BOOL used;
+	UINT16 *page_table_entry;
 }phys_mem_entry;
 
 
