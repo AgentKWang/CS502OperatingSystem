@@ -16,6 +16,7 @@ typedef struct{
 	INT32 pid;
 	BOOL used;
 	UINT16 *page_table_entry;
+	INT16 disk_sector;
 }phys_mem_entry;
 
 

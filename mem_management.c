@@ -30,6 +30,7 @@ void init_page(INT32 vpn, INT32 pid){
 	phys_mem[blank_page].pid = pid;
 	phys_mem[blank_page].used = TRUE;
 	phys_mem[blank_page].page_table_entry = &Z502_PAGE_TBL_ADDR[vpn]; //set the page table entry which is using this memory page
+	phys_mem[blank_page].disk_sector = vpn;
 	clear_touched(); //clear reference bit
 }
 
@@ -44,7 +45,7 @@ void clear_touched(){
 	}
 }
 
-INT32 find_free_phys_page(INT32 vpn){
+INT32 find_free_phys_page(){
 	int i; //Initialization in for loop is only allowed in C99
 	INT32 phy_page_number = -1;
 	UINT16* pg_tbl_entry;
@@ -60,19 +61,20 @@ INT32 find_free_phys_page(INT32 vpn){
 		}
 	}
 	//if the next code is executed, then the memory is full and we need to do a page replacement
-	pg_tbl_entry = phys_mem[phy_page_number].page_table_entry;//get the entry which is currently using the phys memory
 	if(phy_page_number==-1){
 		//printf("\nPANIC!!:ERROR NO SPACE IN MEMORY!\n");
 		phy_page_number = 0;
 	}
+	pg_tbl_entry = phys_mem[phy_page_number].page_table_entry;//get the entry which is currently using the phys memory
 	if(((*pg_tbl_entry) | PTBL_MODIFIED_BIT) || !((*pg_tbl_entry) | PTBL_ON_DISK)){ //if the memory is dirty, we need to write it to disk
 		INT32 disk_id = get_current_pcb()->pid;
 		if(disk_id==0) disk_id=1;
 		char buffer[PGSIZE];
 		Z502ReadPhysicalMemory(phy_page_number, buffer);
-		disk_write(disk_id, vpn, buffer); //write the data to the memory
-		*phys_mem[phy_page_number].page_table_entry = *phys_mem[phy_page_number].page_table_entry | PTBL_ON_DISK;//set on disk bit
-		*phys_mem[phy_page_number].page_table_entry = *phys_mem[phy_page_number].page_table_entry & (~PTBL_VALID_BIT);//clear the replaced page's valid bit
+		*pg_tbl_entry = *pg_tbl_entry & (~PTBL_VALID_BIT);//clear the replaced page's valid bit
+		disk_write(disk_id, phys_mem[phy_page_number].disk_sector,buffer); //write the data to the memory
+		*pg_tbl_entry = *pg_tbl_entry | PTBL_ON_DISK;//set on disk bit
+		*pg_tbl_entry = *pg_tbl_entry & (~PTBL_MODIFIED_BIT); //clear modified bit
 	}
 	return phy_page_number;
 }
