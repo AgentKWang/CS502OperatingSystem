@@ -364,10 +364,20 @@ void    osInit( int argc, char *argv[]  ) {
 			pcb = create_process((void *)test2f, USER_MODE ,0, "test2f");
 			run_process (pcb);
 		}
+    	else if(strcmp(argv[1],"test2g") == 0 || strcmp(argv[1],"2g") == 0){
+			printf("test2g is chosen, now run test2g \n");
+			pcb = create_process((void *)test2g, USER_MODE ,0, "test2g");
+			run_process (pcb);
+		}
+    	else if(strcmp(argv[1],"test2h") == 0 || strcmp(argv[1],"2h") == 0){
+			printf("test2h is chosen, now run test2h \n");
+			pcb = create_process((void *)test2h, USER_MODE ,0, "test2h");
+			run_process (pcb);
+		}
     }
     else{
-    	printf("No switch set, run test2f now \n");
-    	pcb = create_process( (void *)test2f, USER_MODE ,0, "test2f");
+    	printf("No switch set, run test2g now \n");
+    	pcb = create_process( (void *)test2g, USER_MODE ,0, "test2g");
     	run_process(pcb);
     }
 }                                               // End of osInit
@@ -447,17 +457,15 @@ void svc_get_process_id(char* process_name,long* process_id,long* err_info){
 		return;
 	}
 	INT32 pid = get_process_id(process_name);
-	if(pid < 0) {
-		pid = get_process_id_in_timer_queue(process_name); //check if the process is in time queue
-		if(pid < 0){
-			*process_id = -1;
-			*err_info = pid;
-		}
+	if(pid < 0) pid = get_process_id_in_timer_queue(process_name); //check if the process is in time queue
+	if(pid < 0) pid = get_process_id_in_disk_queue(process_name);
+	if(pid < 0){
+		*process_id = -1;
+		*err_info = pid;
+		return;
 	}
-	else{
-		*process_id = pid;
-		*err_info = ERR_SUCCESS;
-	}
+	*process_id = pid;
+	*err_info = ERR_SUCCESS;
 }
 
 void svc_resume_process(INT32 pid, long* err_info){

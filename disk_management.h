@@ -20,5 +20,5 @@ typedef struct{
 PCB* get_next(INT32 disk_id);
 void disk_read(INT32 disk_id, INT32 sector, char* buffer);
 void disk_write(INT32 disk_id, INT32 sector, char* buffer);
-
+INT32 get_process_id_in_disk_queue(char* process_name);
 #endif /* DISK_MANAGEMENT_H_ */

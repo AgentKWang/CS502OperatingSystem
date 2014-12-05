@@ -113,3 +113,19 @@ void transfer_ctrl(){//check if any process wait in ready queue,find another pro
 	}
 	run_process(target);
 }
+
+INT32 get_process_id_in_disk_queue(char* process_name){
+	INT32 lock_result;
+	READ_MODIFY(DISK_QUEUE_LOCK, 1, TRUE, &lock_result); //lock on diskQ
+	disk_queue_node * queue_pointer = disk_queue_header.next;
+	while(queue_pointer != -1) {
+		if(strcmp(process_name, queue_pointer->pcb->name)==0){
+			READ_MODIFY(DISK_QUEUE_LOCK, 0, TRUE, &lock_result); //unlock the diskq
+			return queue_pointer->pcb->pid;
+		}
+		else
+			queue_pointer= queue_pointer->next;
+	}
+	READ_MODIFY(DISK_QUEUE_LOCK, 0, TRUE, &lock_result); //unlock the disk_queue
+	return -1;
+}
