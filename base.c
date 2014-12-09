@@ -29,6 +29,7 @@
 #include 			 "p_manage.h"
 #include			 "timer_manage.h"
 #include			 "msg_manage.h"
+#include			 "mem_management.h"
 
 // These loacations are global and define information about the page table
 extern UINT16        *Z502_PAGE_TBL_ADDR;
@@ -59,7 +60,7 @@ void state_print(char* action, INT32 target_pid);
 void page_fault(int vpn);
 void disk_write(INT32 disk_id, INT32 sector, char* buffer);
 void disk_read(INT32 disk_id, INT32 sector, char* buffer);
-
+void svc_share_memory(INT32 vpn, INT32 size, char* tag, INT32* id, INT32* err_info );
 /************************************************************************
 Internal routine for interrupts.
 ************************************************************************/
@@ -235,10 +236,19 @@ void    svc( SYSTEM_CALL_DATA *SystemCallData ) {
             disk_read(disk_id, sector, buffer);
             break;
         }
+        case SYSNUM_DEFINE_SHARED_AREA:{
+        	INT32 virtual_page_number = (INT32)SystemCallData->Argument[0]/PGSIZE;
+        	INT32 size = (INT32)SystemCallData->Argument[1];
+        	char *tag = (char*)SystemCallData->Argument[2];
+        	INT32* share_id = (INT32*)SystemCallData->Argument[3];
+        	INT32* err_info = (INT32*)SystemCallData->Argument[4];
+        	svc_share_memory(virtual_page_number, size, tag, share_id, err_info);
+        	break;
+        }
         default:  
             printf( "ERROR!  call_type not recognized!\n" ); 
             printf( "Call_type is - %i\n", call_type);
-    }                                           
+    }
 }                                               // End of svc
 
 
@@ -376,8 +386,8 @@ void    osInit( int argc, char *argv[]  ) {
 		}
     }
     else{
-    	printf("No switch set, run test2g now \n");
-    	pcb = create_process( (void *)test2g, USER_MODE ,0, "test2g");
+    	printf("No switch set, run test2h now \n");
+    	pcb = create_process( (void *)test2h, USER_MODE ,0, "test2h");
     	run_process(pcb);
     }
 }                                               // End of osInit
@@ -653,4 +663,24 @@ void page_fault(INT32 vpn){
 		Z502Halt();
 	}
 	init_page(vpn, get_current_pcb()->pid); //in the mem_management block, os will find a proper phys_page
+}
+
+void svc_share_memory(INT32 vpn, INT32 size, char* tag, INT32* id, INT32* err_info ){
+	if(Z502_PAGE_TBL_ADDR==0) 	Z502_PAGE_TBL_ADDR = calloc(VIRTUAL_MEM_PAGES,sizeof(short)); //first initial the page table if it has not been initialized
+	if(Z502_PAGE_TBL_LENGTH==0) 	Z502_PAGE_TBL_LENGTH = VIRTUAL_MEM_PAGES;
+	sh_mem_tbl_entry* sh_mem = get_sh_mem(tag);
+	if(sh_mem == (sh_mem_tbl_entry*) -1){
+		create_sh_mem_entry(tag, get_current_pcb()->pid, &Z502_PAGE_TBL_ADDR[vpn], size);
+		id = 0;
+	}
+	else{
+		id = add_sharer_in_sh_mem(sh_mem, get_current_pcb()->pid, &Z502_PAGE_TBL_ADDR[vpn]);
+	}
+	//this is for debug
+	int i;
+	for(i=0; i<size; i++){
+		printf("Page:%d   Content:%d \n", vpn+i, Z502_PAGE_TBL_ADDR[vpn+i]);
+	}
+	//debug end
+	err_info = ERR_SUCCESS;
 }
