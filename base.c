@@ -508,7 +508,14 @@ void svc_suspend_process(INT32 pid,long* err_info){
 	}
 	else{ //if the process ask to suspend itself
 		if(is_ready_queue_empty()){ //if there's nothing in ready q
-			*err_info = -2 ;
+			*err_info = suspend_process(pid);
+			state_print("never", 0);
+			PCB* next_run = dispatcher();
+			while(next_run==-1){
+				Z502Idle();
+				next_run = dispatcher();
+			}
+			run_process(next_run);
 			return;
 		}
 		else{ // if there's something in readyq, run it.
@@ -620,6 +627,7 @@ void disk_interrupt_handler(INT32 disk_id){
 }
 
 void state_print(char* action, INT32 target_pid){
+	return; //now we want to limit the use of state printer in project phase 2
 	INT32 current_time;
 	MEM_READ( Z502ClockStatus, &current_time); //read current time
 	INT32 lock_result;
@@ -671,16 +679,24 @@ void svc_share_memory(INT32 vpn, INT32 size, char* tag, INT32* id, INT32* err_in
 	sh_mem_tbl_entry* sh_mem = get_sh_mem(tag);
 	if(sh_mem == (sh_mem_tbl_entry*) -1){
 		create_sh_mem_entry(tag, get_current_pcb()->pid, &Z502_PAGE_TBL_ADDR[vpn], size);
-		id = 0;
+		*id = 0;
 	}
 	else{
-		id = add_sharer_in_sh_mem(sh_mem, get_current_pcb()->pid, &Z502_PAGE_TBL_ADDR[vpn]);
+		*id = add_sharer_in_sh_mem(sh_mem, get_current_pcb()->pid, &Z502_PAGE_TBL_ADDR[vpn]);
 	}
-	//this is for debug
+	/**this is for debug
 	int i;
 	for(i=0; i<size; i++){
 		printf("Page:%d   Content:%d \n", vpn+i, Z502_PAGE_TBL_ADDR[vpn+i]);
 	}
-	//debug end
-	err_info = ERR_SUCCESS;
+	//debug end **/
+	*err_info = ERR_SUCCESS;
+}
+
+void mem_printer(){
+	int i;
+	for(i=0; i<20; i++){
+		printf("page: %d   content: %d       ", i, Z502_PAGE_TBL_ADDR[i]);
+		if(i%5==0) printf("\n");
+	}
 }
