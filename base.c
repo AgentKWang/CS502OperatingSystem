@@ -400,8 +400,9 @@ void    osInit( int argc, char *argv[]  ) {
     }
     else{
     	STATE_PRINTER_CTRL = STATE_PRINTER_FULL;
-    	printf("No switch set, run test2c now \n");
-    	pcb = create_process( (void *)test2c, USER_MODE ,0, "test2c");
+    	MEM_PRINTER_CTRL = MEM_PRINTER_FULL;
+    	printf("No switch set, run test2a now \n");
+    	pcb = create_process( (void *)test2a, USER_MODE ,0, "test2a");
     	run_process(pcb);
     }
 }                                               // End of osInit
