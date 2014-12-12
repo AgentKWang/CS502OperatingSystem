@@ -146,3 +146,14 @@ void set_area_valid(UINT16* pg_entry, INT32 size, INT32* phys_mem_adds){
 		pg_entry[i] = pg_entry[i] | (phys_mem_adds[i] & PTBL_PHYS_PG_NO); //set the phys page number
 	}
 }
+
+void print_phys_mem(){
+	int i;
+	for(i=0; i<PHYS_MEM_PGS; i++){
+		INT32 local_vpn;
+		if(phys_mem[i].page_table_entry==0) local_vpn=0;
+		else local_vpn = *(phys_mem[i].page_table_entry)>>13;
+		MP_setup( i, phys_mem[i].pid , phys_mem[i].disk_sector, local_vpn );
+	}
+	MP_print_line();
+}

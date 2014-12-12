@@ -5,10 +5,10 @@
  *      Author: Kehan
  */
 #include "disk_management.h"
-#define DISK_QUEUE_LOCK MEMORY_INTERLOCK_BASE+20
 
 disk_queue_node disk_queue_header = {0,0,-1};
 
+void transfer_ctrl();
 
 PCB* get_next(INT32 disk_id){
 	PCB *wake_up_pcb = -1;
@@ -73,6 +73,7 @@ void disk_write(INT32 disk_id, INT32 sector, char* buffer){
 		temp = 0; //start the disk
 		MEM_WRITE(Z502DiskStart, &temp);
 	}
+	state_print("d_wrt", get_current_pcb()->pid);
 	transfer_ctrl();
 }
 
@@ -102,6 +103,7 @@ void disk_read(INT32 disk_id, INT32 sector, char* buffer){
 		MEM_WRITE(Z502DiskSetAction, &temp);
 		MEM_WRITE(Z502DiskStart, &temp);
 	}
+	state_print("d_rd", get_current_pcb()->pid);
 	transfer_ctrl();
 }
 
@@ -128,4 +130,16 @@ INT32 get_process_id_in_disk_queue(char* process_name){
 	}
 	READ_MODIFY(DISK_QUEUE_LOCK, 0, TRUE, &lock_result); //unlock the disk_queue
 	return -1;
+}
+
+void print_disk_queue(current_pid){
+	INT32 lock_result;
+	READ_MODIFY(DISK_QUEUE_LOCK, 1, TRUE, &lock_result);
+	disk_queue_node *pointer = disk_queue_header.next;
+	SP_setup(SP_RUNNING_MODE, current_pid);
+	while(pointer!=-1){
+		SP_setup(SP_DISK_SUSPENDED_MODE,pointer->pcb->pid);
+		pointer=pointer->next;
+	}
+	READ_MODIFY(DISK_QUEUE_LOCK, 0, TRUE, &lock_result);
 }

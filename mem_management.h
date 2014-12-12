@@ -45,5 +45,5 @@ void init_page(INT32 vpn, INT32 pid);
 sh_mem_tbl_entry* get_sh_mem(char* tag);
 void create_sh_mem_entry(char* tag, INT32 pid, UINT16* pg_entry, INT32 size);
 INT32 add_sharer_in_sh_mem(sh_mem_tbl_entry* shared_area_info, INT32 pid, UINT16* pg_entry);
-
+void print_phys_mem();
 #endif /* MEM_MANAGEMENT_H_ */

@@ -43,7 +43,16 @@ char                 *call_names[] = { "mem_read ", "mem_write",
                             "suspend  ", "resume   ", "ch_prior ",
                             "send     ", "receive  ", "disk_read",
                             "disk_wrt ", "def_sh_ar" };
-
+INT32 MEM_PRINTER_CTRL = 0;
+INT32 STATE_PRINTER_CTRL = 0;
+#define MEM_PRINTER_NO 0
+#define MEM_PRINTER_LIMITED 1
+#define MEM_PRINTER_FULL 2
+#define MEM_PRINTER_FREQUENCY 100
+#define STATE_PRINTER_NO 0
+#define STATE_PRINTER_LIMITED 1
+#define STATE_PRINTER_FULL 2
+#define STATE_PRINTER_FREQUENCY 10
 /************************************************************************
    Internal routine for system calls.
 ************************************************************************/
@@ -58,16 +67,13 @@ void svc_send_message(INT32 target_pid, char* msg, INT32 msg_length, long *err_i
 void svc_receive_message(INT32 source_pid, char* buffer, INT32 receive_length, INT32 *actual_length, INT32 *actual_source, long* err_info);
 void state_print(char* action, INT32 target_pid);
 void page_fault(int vpn);
-void disk_write(INT32 disk_id, INT32 sector, char* buffer);
-void disk_read(INT32 disk_id, INT32 sector, char* buffer);
 void svc_share_memory(INT32 vpn, INT32 size, char* tag, INT32* id, INT32* err_info );
 /************************************************************************
 Internal routine for interrupts.
 ************************************************************************/
 void clock_interrupt_handler();
 void disk_interrupt_handler(INT32 disk_id);
-void transfer_ctrl();
-
+void mem_printer();
 
 
 
@@ -345,31 +351,38 @@ void    osInit( int argc, char *argv[]  ) {
 			run_process (pcb);
     	}
     	else if(strcmp(argv[1],"test2a") == 0 || strcmp(argv[1],"2a") == 0){
+    		MEM_PRINTER_CTRL = MEM_PRINTER_FULL; //set the memory printer to be full
 			printf("test2a is chosen, now run test2a \n");
 			pcb = create_process((void *)test2a, USER_MODE ,0, "test2a");
 			run_process (pcb);
     	}
     	else if(strcmp(argv[1],"test2b") == 0 || strcmp(argv[1],"2b") == 0){
+    		MEM_PRINTER_CTRL = MEM_PRINTER_FULL;
 			printf("test2b is chosen, now run test2b \n");
 			pcb = create_process((void *)test2b, USER_MODE ,0, "test2b");
 			run_process (pcb);
     	}
     	else if(strcmp(argv[1],"test2c") == 0 || strcmp(argv[1],"2c") == 0){
+    		STATE_PRINTER_CTRL = STATE_PRINTER_NO;
 			printf("test2c is chosen, now run test2c \n");
 			pcb = create_process((void *)test2c, USER_MODE ,0, "test2c");
 			run_process (pcb);
     	}
     	else if(strcmp(argv[1],"test2d") == 0 || strcmp(argv[1],"2d") == 0){
+    		STATE_PRINTER_CTRL=STATE_PRINTER_LIMITED;
 			printf("test2d is chosen, now run test2d \n");
 			pcb = create_process((void *)test2d, USER_MODE ,0, "test2d");
 			run_process (pcb);
     	}
     	else if(strcmp(argv[1],"test2e") == 0 || strcmp(argv[1],"2e") == 0){
+    		MEM_PRINTER_CTRL = MEM_PRINTER_LIMITED;
+    		STATE_PRINTER_CTRL=STATE_PRINTER_LIMITED;
 			printf("test2e is chosen, now run test2e \n");
 			pcb = create_process((void *)test2e, USER_MODE ,0, "test2e");
 			run_process (pcb);
     	}
     	else if(strcmp(argv[1],"test2f") == 0 || strcmp(argv[1],"2f") == 0){
+    		MEM_PRINTER_CTRL = MEM_PRINTER_LIMITED;
 			printf("test2f is chosen, now run test2f \n");
 			pcb = create_process((void *)test2f, USER_MODE ,0, "test2f");
 			run_process (pcb);
@@ -386,8 +399,9 @@ void    osInit( int argc, char *argv[]  ) {
 		}
     }
     else{
-    	printf("No switch set, run test2h now \n");
-    	pcb = create_process( (void *)test2h, USER_MODE ,0, "test2h");
+    	STATE_PRINTER_CTRL = STATE_PRINTER_FULL;
+    	printf("No switch set, run test2c now \n");
+    	pcb = create_process( (void *)test2c, USER_MODE ,0, "test2c");
     	run_process(pcb);
     }
 }                                               // End of osInit
@@ -624,10 +638,20 @@ void clock_interrupt_handler(){
 void disk_interrupt_handler(INT32 disk_id){
 	PCB* next_to_run = get_next(disk_id);
 	add_ready_queue(next_to_run);
+	state_print("d_int", next_to_run->pid);
 }
 
 void state_print(char* action, INT32 target_pid){
-	return; //now we want to limit the use of state printer in project phase 2
+	static int scheduler_counter = 0;
+	scheduler_counter += 1;
+	switch(STATE_PRINTER_CTRL){//now we want to limit the use of state printer in project phase 2
+		case STATE_PRINTER_NO:
+			return;
+			break;
+		case STATE_PRINTER_LIMITED:
+			if(scheduler_counter % STATE_PRINTER_FREQUENCY != 0) return;
+			break;
+	}
 	INT32 current_time;
 	MEM_READ( Z502ClockStatus, &current_time); //read current time
 	INT32 lock_result;
@@ -640,6 +664,7 @@ void state_print(char* action, INT32 target_pid){
 	print_ready_queue();
 	print_time_queue();
 	print_suspend_queue();
+	print_disk_queue(get_current_pcb()->pid);
 	SP_print_line();
 	READ_MODIFY(MEMORY_INTERLOCK_BASE + 2 , 0, TRUE, &lock_result); //unlock the printer
 }
@@ -671,6 +696,7 @@ void page_fault(INT32 vpn){
 		Z502Halt();
 	}
 	init_page(vpn, get_current_pcb()->pid); //in the mem_management block, os will find a proper phys_page
+	mem_printer();
 }
 
 void svc_share_memory(INT32 vpn, INT32 size, char* tag, INT32* id, INT32* err_info ){
@@ -694,9 +720,16 @@ void svc_share_memory(INT32 vpn, INT32 size, char* tag, INT32* id, INT32* err_in
 }
 
 void mem_printer(){
-	int i;
-	for(i=0; i<20; i++){
-		printf("page: %d   content: %d       ", i, Z502_PAGE_TBL_ADDR[i]);
-		if(i%5==0) printf("\n");
+	static mem_printer_counter = 0;
+	mem_printer_counter += 1;
+	switch(MEM_PRINTER_CTRL){
+		case MEM_PRINTER_NO:
+			break;
+		case MEM_PRINTER_LIMITED:
+			if(mem_printer_counter % MEM_PRINTER_FREQUENCY == 1) print_phys_mem();
+			break;
+		case MEM_PRINTER_FULL:
+			print_phys_mem();
+			break;
 	}
 }
